@@ -1,16 +1,17 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <title>Thai Trainer</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 9 6%22><rect width=%229%22 height=%226%22 fill=%22%23a51931%22/><rect y=%221%22 width=%229%22 height=%224%22 fill=%22%23f4f5f8%22/><rect y=%222%22 width=%229%22 height=%222%22 fill=%22%232d2a4a%22/></svg>">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Thai Trainer – Emojis</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 9 6%22><rect width=%229%22 height=%226%22 fill=%22%23a51931%22/><rect y=%221%22 width=%229%22 height=%224%22 fill=%22%23f4f5f8%22/><rect y=%222%22 width=%229%22 height=%222%22 fill=%22%232d2a4a%22/></svg>" />
     <style>
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
         }
+
         :root {
             --bg: #f5f5f0;
             --bg2: #fff;
@@ -20,17 +21,11 @@
             --text2: #555;
             --text3: #888;
             --text4: #aaa;
-            --badge-bg: #f0f0f0;
-            --badge-text: #666;
-            --input-bg: #fff;
             --hover: #f5f5f5;
-            --hover2: #f0f0f0;
-            --code-bg: #e8e8e8;
-            --instr-bg: #f8f8f8;
-            --progress-bg: #eee;
             --primary: #1a1a1a;
             --primary-text: #fff;
         }
+
         body.dark {
             --bg: #0f0f0f;
             --bg2: #1c1c1e;
@@ -40,17 +35,11 @@
             --text2: #aaa;
             --text3: #777;
             --text4: #555;
-            --badge-bg: #2c2c2e;
-            --badge-text: #aaa;
-            --input-bg: #1c1c1e;
             --hover: #2c2c2e;
-            --hover2: #2c2c2e;
-            --code-bg: #2c2c2e;
-            --instr-bg: #1c1c1e;
-            --progress-bg: #2c2c2e;
             --primary: #f0f0f0;
             --primary-text: #0f0f0f;
         }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             background: var(--bg);
@@ -58,11 +47,13 @@
             min-height: 100vh;
             transition: background .2s, color .2s;
         }
+
         .app {
             max-width: 600px;
             margin: 0 auto;
             padding: 16px;
         }
+
         .header {
             display: flex;
             align-items: center;
@@ -70,25 +61,30 @@
             margin-bottom: 4px;
             gap: 8px;
         }
+
         .header-left {
             display: flex;
             align-items: center;
             gap: 10px;
         }
+
         h1 {
             font-size: 20px;
             font-weight: 500;
         }
+
         .subtitle {
             font-size: 13px;
             color: var(--text3);
-            margin-bottom: 20px;
+            margin-bottom: 24px;
         }
+
         .header-btns {
             display: flex;
             align-items: center;
             gap: 8px;
         }
+
         .dark-toggle {
             background: none;
             border: 1px solid var(--border2);
@@ -105,234 +101,50 @@
             width: 32px;
             height: 32px;
         }
+
         .dark-toggle:hover {
             background: var(--hover);
         }
-        .card {
-            background: var(--bg2);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 20px;
-            min-height: 200px;
+
+        /* Emoji‑Button‑Grid – genau wie „Anhören“ eingerahmt */
+        .emoji-grid {
             display: flex;
-            flex-direction: column;
-            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
             justify-content: center;
-            text-align: center;
-            cursor: pointer;
-            user-select: none;
-            transition: background .3s;
+            padding: 12px 0;
         }
-        .card:hover {
-            background: var(--hover);
-        }
-        .btn {
+
+        .btn-emoji {
             background: var(--bg2);
             border: 1px solid var(--border2);
             border-radius: 8px;
-            padding: 7px 16px;
-            font-size: 13px;
+            padding: 6px 12px;
+            font-size: 28px;
             line-height: 1.2;
-            cursor: pointer;
+            cursor: default;
             color: var(--text);
             transition: all .15s;
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            min-width: 50px;
+            min-height: 50px;
+            user-select: none;
         }
-        .btn:hover {
+
+        .btn-emoji:hover {
             background: var(--hover);
+            transform: scale(1.02);
         }
-        .btn:active {
-            transform: scale(.98);
-        }
-        .btn-primary {
-            background: var(--primary);
-            color: var(--primary-text);
-            border-color: var(--primary);
-        }
-        .btn-primary:hover {
-            opacity: .85;
-        }
-        .btn-success {
-            background: #1a3a1a;
-            border-color: #2d5a2d;
-            color: #6fcf6f;
-        }
-        .btn-danger {
-            background: #3a1a1a;
-            border-color: #5a2d2d;
-            color: #cf6f6f;
-        }
-        body:not(.dark) .btn-success {
-            background: #e8f5e9;
-            border-color: #a5d6a7;
-            color: #2e7d32;
-        }
-        body:not(.dark) .btn-danger {
-            background: #fdecea;
-            border-color: #ef9a9a;
-            color: #c62828;
-        }
-        .btn-h32 {
-            height: 32px;
-        }
-        .action-row {
-            display: flex;
-            align-items: center;
-            margin-top: 10px;
-            gap: 8px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-        #cardFront {
-            font-size: 40px;
-            font-weight: 500;
-            margin-bottom: 8px;
-            line-height: 1.2;
-        }
-        #cardFront.size-small {
-            font-size: 28px;
-        }
-        #cardPronun {
-            font-size: 15px;
-            color: var(--text3);
-            margin-bottom: 2px;
-        }
-        #cardPronunBack {
-            font-size: 15px;
-            color: var(--text3);
-            margin-top: 6px;
-            margin-bottom: 2px;
-        }
-        #cardIpaBack {
-            font-size: 13px;
-            color: var(--text4);
-            font-style: italic;
-            margin-bottom: 6px;
-        }
-        #cardIpa {
-            font-size: 13px;
-            color: var(--text4);
-            font-style: italic;
-            margin-bottom: 6px;
-        }
-        #cardBack {
-            font-size: 20px;
-            color: var(--text2);
-            margin-top: 12px;
-        }
-        #cardBack.size-large {
-            font-size: 32px;
-            font-weight: 500;
-            color: var(--text);
-        }
-        #cardEnglishBack {
-            font-size: 14px;
-            color: var(--text3);
-            margin-top: 6px;
-            margin-bottom: 2px;
-        }
-        #cardHint {
-            font-size: 12px;
-            color: var(--text4);
-            margin-top: 16px;
-        }
-        #cardLang {
-            font-size: 11px;
-            color: var(--text4);
-            margin-bottom: 10px;
-            letter-spacing: .05em;
-            text-transform: uppercase;
-        }
-        .flash-green {
-            background: #1a3a1a !important;
-        }
-        .flash-red {
-            background: #3a1a1a !important;
-        }
-        body:not(.dark) .flash-green {
-            background: #e8f5e9 !important;
-        }
-        body:not(.dark) .flash-red {
-            background: #fdecea !important;
-        }
-        #doneMsg {
-            text-align: center;
-            padding: 2rem 0;
-        }
-        select {
-            font-size: 13px;
-            padding: 7px 12px;
-            border-radius: 8px;
-            border: 1px solid var(--border2);
-            background: var(--input-bg);
-            color: var(--text);
-            outline: none;
-            line-height: 1.2;
-            height: auto;
-            box-sizing: border-box;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 8px center;
-            padding-right: 32px;
-        }
-        select:focus {
-            border-color: var(--text3);
-        }
-        .progress-bar {
-            height: 4px;
-            background: var(--progress-bg);
-            border-radius: 2px;
-            margin-bottom: 14px;
-            overflow: hidden;
-        }
-        .progress-fill {
-            height: 100%;
-            background: var(--primary);
-            border-radius: 2px;
-            transition: width .3s;
-        }
-        .badge {
-            font-size: 12px;
-            padding: 3px 10px;
-            border-radius: 6px;
-            background: var(--badge-bg);
-            color: var(--badge-text);
-            display: inline-flex;
-            align-items: center;
-            line-height: 1.4;
-            height: 26px;
-            border: 1px solid transparent;
-        }
-        .stats-row {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            align-items: center;
-            justify-content: center;
-        }
-        .listen-row {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            justify-content: center;
-            margin-top: 4px;
-        }
-        .listen-row .btn {
-            font-size: 20px;
-            padding: 4px 12px;
-        }
-        @media (max-width:480px) {
-            .app {
-                padding: 12px;
-            }
-            #cardFront {
-                font-size: 32px;
+
+        /* Für kleinere Bildschirme etwas anpassen */
+        @media (max-width: 480px) {
+            .btn-emoji {
+                font-size: 24px;
+                min-width: 44px;
+                min-height: 44px;
+                padding: 4px 10px;
             }
         }
     </style>
@@ -344,9 +156,9 @@
             <div class="header-left">
                 <h1>
                     <svg class="th-flag-icon" viewBox="0 0 9 6" width="22" height="15">
-                        <rect width="9" height="6" fill="#a51931"/>
-                        <rect y="1" width="9" height="4" fill="#f4f5f8"/>
-                        <rect y="2" width="9" height="2" fill="#2d2a4a"/>
+                        <rect width="9" height="6" fill="#a51931" />
+                        <rect y="1" width="9" height="4" fill="#f4f5f8" />
+                        <rect y="2" width="9" height="2" fill="#2d2a4a" />
                     </svg>
                     Thai Trainer
                 </h1>
@@ -355,296 +167,48 @@
                 <button class="dark-toggle" onclick="toggleDark()" id="darkBtn">☀️</button>
             </div>
         </div>
-        <p class="subtitle">Dein persönlicher Vokabel-Trainer</p>
+        <p class="subtitle">Deine Emoji‑Sammlung</p>
 
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
-            <select id="modeSelect" style="width:auto;flex:1;min-width:160px" onchange="setMode(this.value)">
-                <option value="th-de">Thai → Deutsch</option>
-                <option value="de-th">Deutsch → Thai</option>
-                <option value="both">Gemischt</option>
-            </select>
-            <select id="voiceSelect" style="width:auto;flex:1;min-width:160px" onchange="saveVoice(this.value)" title="Stimme auswählen">
-                <option value="">🔊 Stimme lädt...</option>
-            </select>
-        </div>
+        <!-- Alle gewünschten Emojis als Buttons -->
+        <div class="emoji-grid">
+            <!-- 1️⃣2️⃣3️⃣4️⃣5️⃣ -->
+            <span class="btn-emoji">1️⃣</span>
+            <span class="btn-emoji">2️⃣</span>
+            <span class="btn-emoji">3️⃣</span>
+            <span class="btn-emoji">4️⃣</span>
+            <span class="btn-emoji">5️⃣</span>
 
-        <div class="progress-bar">
-            <div class="progress-fill" id="progressFill" style="width:0%"></div>
-        </div>
+            <!-- 🤎🤍🩶🖤💜 -->
+            <span class="btn-emoji">🤎</span>
+            <span class="btn-emoji">🤍</span>
+            <span class="btn-emoji">🩶</span>
+            <span class="btn-emoji">🖤</span>
+            <span class="btn-emoji">💜</span>
 
-        <div class="stats-row">
-            <span class="badge" id="statLeft">Karten: 0</span>
-            <span class="badge" id="statTotal" style="display:none">0 Karten</span>
-        </div>
+            <!-- 💙🩵💚💛🧡❤️🩷 -->
+            <span class="btn-emoji">💙</span>
+            <span class="btn-emoji">🩵</span>
+            <span class="btn-emoji">💚</span>
+            <span class="btn-emoji">💛</span>
+            <span class="btn-emoji">🧡</span>
+            <span class="btn-emoji">❤️</span>
+            <span class="btn-emoji">🩷</span>
 
-        <div class="card" id="mainCard" onclick="flipCard()">
-            <div id="cardLang"></div>
-            <div id="cardFront"></div>
-            <div id="cardPronun"></div>
-            <div id="cardIpa"></div>
-            <div id="cardBack" style="display:none"></div>
-            <div id="cardEnglishBack" style="display:none"></div>
-            <div id="cardPronunBack" style="display:none"></div>
-            <div id="cardIpaBack" style="display:none"></div>
-            <div id="cardHint">Tippen zum Aufdecken</div>
-        </div>
-
-        <div class="action-row" id="actionRow">
-            <button class="btn btn-danger btn-h32" onclick="markCard(false)" id="againBtn" style="display:none">✗ Nochmal</button>
-            <button class="btn btn-success btn-h32" onclick="markCard(true)" id="knownBtn" style="display:none">✓ Gewusst</button>
-        </div>
-
-        <div class="listen-row">
-            <button class="btn btn-h32" onclick="speak()" id="listenBtn1">🎙️ Anhören</button>
-            <button class="btn btn-h32" onclick="speak()" id="listenBtn2">👤 Anhören</button>
-            <button class="btn btn-h32" onclick="speak()" id="listenBtn2">🚹 Anhören</button>
-            <button class="btn btn-h32" onclick="speak()" id="listenBtn2">3️⃣ Anhören</button>
-        </div>
-
-        <div id="doneMsg" style="display:none">
-            <div style="font-size:32px;margin-bottom:8px">🎉</div>
-            <div style="font-size:18px;font-weight:500;margin-bottom:6px" id="doneTitle">Runde abgeschlossen!</div>
-            <div id="doneStats" style="font-size:14px;color:var(--text3);margin-bottom:16px"></div>
-            <button class="btn btn-primary btn-h32" onclick="restartSession()" id="doneRestartBtn">Nochmal von vorne</button>
+            <!-- 🍉🍋‍🟩🥭🌶️🍺🍿🥥 -->
+            <span class="btn-emoji">🍉</span>
+            <span class="btn-emoji">🍋‍🟩</span>
+            <span class="btn-emoji">🥭</span>
+            <span class="btn-emoji">🌶️</span>
+            <span class="btn-emoji">🍺</span>
+            <span class="btn-emoji">🍿</span>
+            <span class="btn-emoji">🥥</span>
         </div>
     </div>
 
     <script>
-        // ===== KONFIGURATION =====
-        const STORAGE_KEY = "thai_trainer_vocab";
-        const DARK_KEY = "thai_trainer_dark";
-        const VOICE_KEY = "thai_trainer_voice";
-        const DEFAULT_VOCAB = [
-            { thai: "ใช่", pronun: "tschái", ipa: "Chı̀", meaning: "Ja / richtig", english: "yes" },
-            { thai: "ไม่", pronun: "mâi", ipa: "Mı̀", meaning: "Nein", english: "no" },
-            { thai: "สวัสดี", pronun: "Sawatdii", ipa: "sa˨˩.wat˨˩.diː˧", meaning: "Hallo", english: "hello" },
-            { thai: "ขอบคุณ", pronun: "Khàawp-khun", ipa: "kʰɔ̀ːp.kʰun", meaning: "Danke", english: "thank you" },
-        ];
-
-        // ===== VOKABELN =====
-        let vocab = loadVocab();
-        let mode = "th-de";
-        let queue = [];
-        let current = null;
-        let flipped = false;
-        let totalInSession = 0;
-        let availableVoices = [];
-
-        function loadVocab() {
-            try {
-                const s = localStorage.getItem(STORAGE_KEY);
-                if (s) {
-                    const p = JSON.parse(s);
-                    if (Array.isArray(p) && p.length > 0) return p;
-                }
-            } catch (_) {}
-            return [...DEFAULT_VOCAB];
-        }
-
-        function saveVocab() {
-            try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(vocab));
-            } catch (_) {}
-        }
-
-        // ===== MISCHEN =====
-        function shuffle(arr) {
-            const a = [...arr];
-            for (let i = a.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [a[i], a[j]] = [a[j], a[i]];
-            }
-            return a;
-        }
-
-        // ===== SESSION =====
-        function restartSession() {
-            queue = shuffle(vocab);
-            totalInSession = queue.length;
-            document.getElementById("doneMsg").style.display = "none";
-            document.getElementById("mainCard").style.display = "flex";
-            document.getElementById("actionRow").style.display = "flex";
-            document.getElementById("againBtn").style.display = "none";
-            document.getElementById("knownBtn").style.display = "none";
-            if (queue.length === 0) {
-                showAllDone();
-            } else {
-                nextCard();
-            }
-        }
-
-        function nextCard() {
-            flipped = false;
-            if (queue.length === 0) {
-                showDone();
-                return;
-            }
-            current = queue.shift();
-            const m = mode === "both" ? (Math.random() < 0.5 ? "th-de" : "de-th") : mode;
-            current._mode = m;
-
-            document.getElementById("cardBack").style.display = "none";
-            document.getElementById("cardHint").style.display = "block";
-            document.getElementById("mainCard").style.background = "";
-            document.getElementById("cardIpa").style.display = "none";
-            document.getElementById("cardPronun").style.display = "none";
-            document.getElementById("cardPronun").textContent = "";
-            document.getElementById("cardPronunBack").style.display = "none";
-            document.getElementById("cardPronunBack").textContent = "";
-            document.getElementById("cardIpaBack").style.display = "none";
-            document.getElementById("cardEnglishBack").style.display = "none";
-            document.getElementById("cardEnglishBack").textContent = "";
-            document.getElementById("cardFront").classList.remove("size-small");
-            document.getElementById("cardBack").classList.remove("size-large");
-            document.getElementById("actionRow").style.display = "flex";
-            document.getElementById("againBtn").style.display = "none";
-            document.getElementById("knownBtn").style.display = "none";
-
-            if (m === "th-de") {
-                document.getElementById("cardLang").textContent = "Thai → Deutsch";
-                document.getElementById("cardFront").textContent = current.thai;
-                current._thaiSide = "front";
-                document.getElementById("cardBack").textContent = current.meaning;
-            } else if (m === "de-th") {
-                document.getElementById("cardLang").textContent = "Deutsch → Thai";
-                document.getElementById("cardFront").textContent = current.meaning;
-                document.getElementById("cardFront").classList.add("size-small");
-                document.getElementById("cardBack").classList.add("size-large");
-                current._thaiSide = "back";
-                document.getElementById("cardBack").textContent = current.thai;
-            }
-
-            if (current._thaiSide === "front") {
-                showPronunFor(current, "front");
-            }
-
-            updateStats();
-        }
-
-        function showPronunFor(v, side) {
-            const pe = side === "back" ? "cardPronunBack" : "cardPronun";
-            const ie = side === "back" ? "cardIpaBack" : "cardIpa";
-            if (v.pronun) {
-                document.getElementById(pe).textContent = v.pronun;
-                document.getElementById(pe).style.display = "block";
-            }
-            if (v.ipa) {
-                document.getElementById(ie).textContent = v.ipa;
-                document.getElementById(ie).style.display = "block";
-            }
-        }
-
-        function flipCard() {
-            if (flipped || !current) return;
-            flipped = true;
-            document.getElementById("cardBack").style.display = "block";
-            document.getElementById("cardHint").style.display = "none";
-            document.getElementById("againBtn").style.display = "inline-flex";
-            document.getElementById("knownBtn").style.display = "inline-flex";
-            if (current && current._thaiSide === "back") {
-                showPronunFor(current, "back");
-            }
-            // Englisch wird nicht mehr angezeigt
-        }
-
-        function markCard(known) {
-            if (!current) return;
-            const c = document.getElementById("mainCard");
-            if (known) {
-                c.classList.add("flash-green");
-            } else {
-                c.classList.add("flash-red");
-            }
-            setTimeout(() => {
-                c.classList.remove("flash-green", "flash-red");
-                nextCard();
-            }, 350);
-        }
-
-        function updateStats() {
-            const progress = totalInSession > 0 ? Math.round(((totalInSession - queue.length) / totalInSession) * 100) : 0;
-            document.getElementById("progressFill").style.width = progress + "%";
-            document.getElementById("statTotal").textContent = vocab.length + " Karten";
-            document.getElementById("statLeft").textContent = "Karten: " + (queue.length + (current ? 1 : 0));
-        }
-
-        function showDone() {
-            document.getElementById("mainCard").style.display = "none";
-            document.getElementById("actionRow").style.display = "none";
-            document.getElementById("doneMsg").style.display = "block";
-            document.getElementById("doneStats").textContent = "Du hast alle Karten dieser Runde gesehen.";
-        }
-
-        function showAllDone() {
-            document.getElementById("mainCard").style.display = "none";
-            document.getElementById("actionRow").style.display = "none";
-            document.getElementById("doneMsg").style.display = "block";
-            document.getElementById("doneStats").textContent = "🎉 Keine Vokabeln vorhanden – füge welche hinzu oder starte neu.";
-        }
-
-        function setMode(val) {
-            mode = val;
-            restartSession();
-        }
-
-        // ===== SPRACHWIESE =====
-        let voiceRetries = 0;
-
-        function loadVoices() {
-            const voices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith("th") || v.lang.startsWith("en"));
-            if (voices.length === 0) {
-                if (voiceRetries < 10) {
-                    voiceRetries++;
-                    setTimeout(loadVoices, 300);
-                }
-                return;
-            }
-            availableVoices = voices;
-            const sel = document.getElementById("voiceSelect");
-            const saved = localStorage.getItem(VOICE_KEY) || "";
-            const thVoices = voices.filter(v => v.lang.startsWith("th"));
-            sel.innerHTML = thVoices.map(v =>
-                `<option value="${v.name}" ${v.name === saved ? "selected" : ""}>${v.name}</option>`
-            ).join("");
-            if (!saved && thVoices.length > 0) saveVoice(thVoices[0].name);
-            else if (saved && !thVoices.find(v => v.name === saved) && thVoices.length > 0) saveVoice(thVoices[0].name);
-        }
-
-        function saveVoice(name) {
-            try { localStorage.setItem(VOICE_KEY, name); } catch (_) {}
-        }
-
-        function speak() {
-            if (!current) return;
-            const isEng = current._mode === "en-th" || current._mode === "th-en";
-            const text = isEng ? (current.english || current.meaning) : current.thai;
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = isEng ? "en-US" : "th-TH";
-            if (!isEng) {
-                const saved = localStorage.getItem(VOICE_KEY);
-                if (saved && availableVoices.length > 0) {
-                    const v = availableVoices.find(v => v.name === saved);
-                    if (v) utterance.voice = v;
-                }
-            } else {
-                const ev = availableVoices.find(v => v.lang.startsWith("en"));
-                if (ev) utterance.voice = ev;
-            }
-            window.speechSynthesis.speak(utterance);
-        }
-
-        window.addEventListener("speechSynthesis:voiceschanged", () => {
-            voiceRetries = 0;
-            loadVoices();
-        });
-        setTimeout(() => {
-            voiceRetries = 0;
-            loadVoices();
-        }, 500);
-
-        // ===== DARK MODE =====
+        // ===== Dark Mode =====
         function initDark() {
-            if (localStorage.getItem(DARK_KEY) === "0") {
+            if (localStorage.getItem("thai_trainer_dark") === "0") {
                 document.body.classList.remove("dark");
                 document.getElementById("darkBtn").textContent = "🌙";
             }
@@ -653,17 +217,16 @@
         function toggleDark() {
             const d = document.body.classList.toggle("dark");
             document.getElementById("darkBtn").textContent = d ? "☀️" : "🌙";
-            try { localStorage.setItem(DARK_KEY, d ? "1" : "0"); } catch (_) {}
+            try {
+                localStorage.setItem("thai_trainer_dark", d ? "1" : "0");
+            } catch (_) {}
         }
 
-        // ===== START =====
         initDark();
-        restartSession();
 
-        // Vokabeln bei Änderungen speichern (nur für eventuelle manuelle Änderungen)
-        // aber es gibt kein UI zum Hinzufügen mehr – trotzdem speichern wir bei Bedarf
-        // (z.B. wenn jemand per Konsole was ändert)
-        window.addEventListener("beforeunload", () => saveVocab());
+        // (Optional) Bei Klick auf einen Button kannst du hier eine Aktion einbauen.
+        // Momentan sind sie statisch – genau wie gewünscht.
     </script>
+
 </body>
 </html>
