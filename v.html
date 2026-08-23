@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Butterchurn MP3 Visualizer</title>
+    <title>Butterchurn Debug</title>
     <style>
         * {
             margin: 0;
@@ -15,9 +15,9 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            overflow: hidden;
+            min-height: 100vh;
             font-family: 'Segoe UI', sans-serif;
+            padding: 10px;
         }
         #container {
             position: relative;
@@ -36,38 +36,34 @@
             height: 100%;
         }
 
+        /* ----- Steuerung ----- */
         #controls {
             position: absolute;
-            bottom: 30px;
-            left: 0;
-            right: 0;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 12px;
-            padding: 12px 20px;
-            background: rgba(0, 0, 0, 0.65);
+            gap: 10px;
+            padding: 12px 18px;
+            background: rgba(0, 0, 0, 0.7);
             backdrop-filter: blur(8px);
             border-radius: 50px;
-            margin: 0 auto;
-            width: fit-content;
-            max-width: 92%;
             border: 1px solid rgba(255, 255, 255, 0.08);
             flex-wrap: wrap;
+            z-index: 10;
         }
         #controls button {
             background: rgba(255, 255, 255, 0.1);
             border: none;
             color: white;
-            font-size: 20px;
-            width: 40px;
-            height: 40px;
+            font-size: 18px;
+            width: 38px;
+            height: 38px;
             border-radius: 50%;
             cursor: pointer;
             transition: background 0.2s;
-            display: flex;
-            justify-content: center;
-            align-items: center;
         }
         #controls button:hover {
             background: rgba(255, 255, 255, 0.25);
@@ -78,38 +74,85 @@
         .file-label {
             background: #6c5ce7;
             color: white;
-            padding: 8px 18px;
+            padding: 7px 16px;
             border-radius: 30px;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: bold;
             cursor: pointer;
             transition: background 0.2s;
-            border: none;
             white-space: nowrap;
         }
         .file-label:hover {
             background: #5541d9;
         }
         #volumeControl {
-            width: 70px;
+            width: 60px;
             accent-color: #6c5ce7;
-            cursor: pointer;
         }
         #songName {
             color: rgba(255, 255, 255, 0.8);
-            font-size: 14px;
-            max-width: 180px;
+            font-size: 13px;
+            max-width: 150px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-            min-width: 60px;
+            min-width: 50px;
             text-align: center;
         }
-        @media (max-width: 600px) {
-            #controls { gap: 8px; padding: 10px 14px; }
-            .file-label { font-size: 12px; padding: 6px 12px; }
-            #volumeControl { width: 50px; }
-            #songName { max-width: 100px; font-size: 12px; }
+
+        /* ----- DEBUG-BEREICH (oben rechts) ----- */
+        #debug {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(6px);
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 255, 0, 0.2);
+            max-width: 320px;
+            max-height: 70%;
+            overflow-y: auto;
+            z-index: 20;
+            line-height: 1.6;
+            pointer-events: none;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+        }
+        #debug .error {
+            color: #ff6b6b;
+        }
+        #debug .success {
+            color: #51cf66;
+        }
+        #debug .info {
+            color: #74c0fc;
+        }
+        #debug .warn {
+            color: #fcc419;
+        }
+        #debug::-webkit-scrollbar {
+            width: 4px;
+        }
+        #debug::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 4px;
+        }
+
+        @media (max-width: 700px) {
+            #debug {
+                top: 10px;
+                right: 10px;
+                font-size: 10px;
+                padding: 8px 12px;
+                max-width: 200px;
+                max-height: 50%;
+            }
+            #controls { padding: 8px 12px; gap: 6px; }
+            .file-label { font-size: 11px; padding: 5px 12px; }
+            #songName { max-width: 80px; font-size: 11px; }
         }
     </style>
 </head>
@@ -118,6 +161,13 @@
     <div id="container">
         <canvas id="visualizer-canvas"></canvas>
 
+        <!-- DEBUG-BEREICH -->
+        <div id="debug">
+            🐞 <b>Debug-Log</b><br />
+            <span id="logOutput">Warte auf Aktion...</span>
+        </div>
+
+        <!-- STEUERUNG -->
         <div id="controls">
             <button id="playBtn" title="Play / Pause">⏸️</button>
             <label class="file-label" for="fileInput">📂 MP3 laden</label>
@@ -149,29 +199,80 @@
         const volumeControl = document.getElementById('volumeControl');
         const songName = document.getElementById('songName');
         const nextPresetBtn = document.getElementById('nextPresetBtn');
+        const logOutput = document.getElementById('logOutput');
+
+        // ----- DEBUG-LOGGER -----
+        const logs = [];
+
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            logs.push({ message, type, timestamp });
+            // Nur die letzten 50 Einträge behalten
+            if (logs.length > 50) logs.shift();
+            renderLog();
+            console.log(`[${type}]`, message);
+        }
+
+        function renderLog() {
+            const html = logs.map(log => {
+                const cls = log.type;
+                return `<span class="${cls}">[${log.timestamp}] ${log.message}</span>`;
+            }).join('<br />');
+            logOutput.innerHTML = html;
+            // Automatisch nach unten scrollen (im Debug-Container)
+            const debugEl = document.getElementById('debug');
+            debugEl.scrollTop = debugEl.scrollHeight;
+        }
+
+        addLog('🚀 Seite geladen, initialisiere...', 'info');
 
         // ----- AudioContext & Visualizer -----
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        let audioContext;
+        try {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            addLog(`✅ AudioContext erstellt (State: ${audioContext.state})`, 'success');
+        } catch (e) {
+            addLog(`❌ AudioContext Fehler: ${e.message}`, 'error');
+        }
 
         const width = container.clientWidth;
         const height = container.clientHeight;
-        const visualizer = butterchurn.createVisualizer(audioContext, canvas, {
-            width: width,
-            height: height,
-            pixelRatio: window.devicePixelRatio || 1,
-        });
 
-        // ----- Presets laden -----
-        const presets = butterchurnPresets.getPresets();
-        const presetKeys = Object.keys(presets);
-        let currentPresetIndex = 0;
+        let visualizer;
+        try {
+            visualizer = butterchurn.createVisualizer(audioContext, canvas, {
+                width: width,
+                height: height,
+                pixelRatio: window.devicePixelRatio || 1,
+            });
+            addLog(`✅ Visualizer erstellt (${width}x${height})`, 'success');
+        } catch (e) {
+            addLog(`❌ Visualizer Fehler: ${e.message}`, 'error');
+        }
+
+        // ----- Presets -----
+        let presetKeys = [];
+        try {
+            const presets = butterchurnPresets.getPresets();
+            presetKeys = Object.keys(presets);
+            addLog(`✅ ${presetKeys.length} Presets geladen`, 'success');
+        } catch (e) {
+            addLog(`❌ Presets Fehler: ${e.message}`, 'error');
+        }
 
         function loadRandomPreset() {
-            if (presetKeys.length === 0) return;
-            const idx = Math.floor(Math.random() * presetKeys.length);
-            visualizer.loadPreset(presets[presetKeys[idx]], 0.0);
-            currentPresetIndex = idx;
-            console.log('Preset geladen:', presetKeys[idx]);
+            if (presetKeys.length === 0) {
+                addLog('⚠️ Keine Presets verfügbar', 'warn');
+                return;
+            }
+            try {
+                const idx = Math.floor(Math.random() * presetKeys.length);
+                const presets = butterchurnPresets.getPresets();
+                visualizer.loadPreset(presets[presetKeys[idx]], 0.0);
+                addLog(`🎨 Preset geladen: ${presetKeys[idx].slice(0, 40)}...`, 'info');
+            } catch (e) {
+                addLog(`❌ Preset-Fehler: ${e.message}`, 'error');
+            }
         }
         loadRandomPreset();
 
@@ -181,105 +282,147 @@
         let currentAudioElement = null;
         let isPlaying = false;
 
-        // ----- Datei auswählen -----
+        // ----- Datei auswählen (mit Debug) -----
         fileInput.addEventListener('change', (event) => {
             const file = event.target.files[0];
+            addLog(`📂 Datei ausgewählt: ${file ? file.name : 'keine'}`, 'info');
+
             if (!file) {
+                addLog('⚠️ Keine Datei im Input', 'warn');
                 songName.textContent = '❌ Keine Datei';
                 return;
             }
 
-            // Sofort Dateinamen anzeigen
+            // Prüfen ob Datei wirklich lesbar ist
+            if (file.size === 0) {
+                addLog('❌ Datei ist leer (0 Bytes)', 'error');
+                songName.textContent = '❌ Leere Datei';
+                return;
+            }
+
+            // Dateiname anzeigen
             const displayName = file.name.length > 25 ? file.name.slice(0, 22) + '…' : file.name;
             songName.textContent = displayName;
-            console.log('Datei ausgewählt:', file.name);
+            addLog(`📄 Dateiname: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`, 'info');
 
             // Alte Verbindungen trennen
-            if (currentSourceNode) {
-                currentSourceNode.disconnect();
-                currentSourceNode = null;
-            }
-            if (currentAudioElement) {
-                currentAudioElement.pause();
-                currentAudioElement.src = '';
-                currentAudioElement = null;
+            try {
+                if (currentSourceNode) {
+                    currentSourceNode.disconnect();
+                    currentSourceNode = null;
+                    addLog('🔌 Alte Quelle getrennt', 'info');
+                }
+                if (currentAudioElement) {
+                    currentAudioElement.pause();
+                    currentAudioElement.src = '';
+                    currentAudioElement = null;
+                    addLog('⏹️ Altes Audio-Element gestoppt', 'info');
+                }
+            } catch (e) {
+                addLog(`⚠️ Fehler beim Trennen: ${e.message}`, 'warn');
             }
 
+            // AudioContext starten (falls nötig) – WICHTIG!
+            if (audioContext.state === 'suspended') {
+                addLog('⏳ AudioContext ist suspended – versuche zu resume...', 'warn');
+                audioContext.resume().then(() => {
+                    addLog(`✅ AudioContext resumed (State: ${audioContext.state})`, 'success');
+                }).catch(err => {
+                    addLog(`❌ Resume fehlgeschlagen: ${err.message}`, 'error');
+                    songName.textContent = '❌ AudioContext Fehler';
+                    return;
+                });
+            }
+
+            // Audio-Element erstellen
             try {
-                // Audio-Element erstellen
                 const audioElement = new Audio();
                 const objectUrl = URL.createObjectURL(file);
                 audioElement.src = objectUrl;
                 audioElement.loop = false;
                 audioElement.volume = volumeControl.value;
+                addLog(`🔊 Audio-Element erstellt, URL: ${objectUrl.slice(0, 40)}...`, 'info');
 
-                // AudioContext starten (falls nötig)
-                if (audioContext.state === 'suspended') {
-                    audioContext.resume().then(() => {
-                        console.log('AudioContext resumed');
-                    }).catch(err => {
-                        console.warn('Resume fehlgeschlagen:', err);
-                    });
-                }
-
-                // MediaElementSource & Analyser
+                // MediaElementSource
                 const source = audioContext.createMediaElementSource(audioElement);
+                addLog('🔗 MediaElementSource erstellt', 'success');
+
                 const analyser = audioContext.createAnalyser();
                 analyser.fftSize = 512;
+                addLog(`📊 Analyser erstellt (fftSize: ${analyser.fftSize})`, 'success');
 
+                // Verbinden
                 source.connect(analyser);
                 analyser.connect(audioContext.destination);
                 visualizer.connectAudio(analyser);
+                addLog('🔗 Audio-Pfad verbunden: Quelle → Analyser → Destination + Visualizer', 'success');
 
                 currentSourceNode = source;
                 currentAnalyser = analyser;
                 currentAudioElement = audioElement;
 
-                // Automatisch abspielen
+                // AUTOMATISCH ABSPIELEN
+                addLog('▶️ Versuche automatische Wiedergabe...', 'info');
                 audioElement.play().then(() => {
                     isPlaying = true;
                     playBtn.textContent = '⏸️';
-                    console.log('▶️ Wiedergabe gestartet');
+                    addLog('✅ Wiedergabe erfolgreich gestartet! 🎵', 'success');
                 }).catch(err => {
-                    console.warn('Autoplay blockiert:', err);
+                    addLog(`⚠️ Autoplay blockiert: ${err.message}`, 'warn');
                     isPlaying = false;
                     playBtn.textContent = '▶️';
-                    songName.textContent = '⚠️ ' + displayName + ' (klicke Play)';
+                    songName.textContent = '⏸️ ' + displayName;
+                    // Zeige dem Nutzer, dass er klicken muss
+                    addLog('👉 Bitte auf Play-Button klicken, um zu starten', 'info');
                 });
 
-                // Datei-Input zurücksetzen
                 fileInput.value = '';
 
             } catch (error) {
-                console.error('Fehler beim Laden der Datei:', error);
-                songName.textContent = '❌ Fehler: ' + error.message;
+                addLog(`❌ Fehler beim Laden: ${error.message}`, 'error');
+                console.error(error);
+                songName.textContent = '❌ Fehler: ' + error.message.slice(0, 30);
             }
         });
 
         // ----- Play / Pause -----
         playBtn.addEventListener('click', () => {
+            addLog(`🔄 Play/Pause geklickt (AudioContext: ${audioContext.state})`, 'info');
+
             if (!currentAudioElement) {
+                addLog('📂 Kein Song geladen – öffne Datei-Dialog', 'info');
                 fileInput.click();
                 return;
             }
 
             if (audioContext.state === 'suspended') {
-                audioContext.resume();
+                addLog('⏳ AudioContext wird resumed...', 'warn');
+                audioContext.resume().then(() => {
+                    addLog(`✅ AudioContext resumed (State: ${audioContext.state})`, 'success');
+                }).catch(err => {
+                    addLog(`❌ Resume fehlgeschlagen: ${err.message}`, 'error');
+                });
             }
 
             if (isPlaying) {
                 currentAudioElement.pause();
                 playBtn.textContent = '▶️';
                 isPlaying = false;
+                addLog('⏸️ Pause', 'info');
             } else {
-                currentAudioElement.play().catch(() => {});
-                playBtn.textContent = '⏸️';
-                isPlaying = true;
+                currentAudioElement.play().then(() => {
+                    addLog('▶️ Wiedergabe gestartet', 'success');
+                    playBtn.textContent = '⏸️';
+                    isPlaying = true;
+                }).catch(err => {
+                    addLog(`❌ Play fehlgeschlagen: ${err.message}`, 'error');
+                });
             }
         });
 
         // ----- Nächstes Preset -----
         nextPresetBtn.addEventListener('click', () => {
+            addLog('🎨 Nächstes Preset angefordert', 'info');
             loadRandomPreset();
         });
 
@@ -287,6 +430,7 @@
         volumeControl.addEventListener('input', () => {
             if (currentAudioElement) {
                 currentAudioElement.volume = volumeControl.value;
+                addLog(`🔊 Lautstärke: ${volumeControl.value}`, 'info');
             }
         });
 
@@ -294,15 +438,29 @@
         window.addEventListener('resize', () => {
             const w = container.clientWidth;
             const h = container.clientHeight;
-            visualizer.setRendererSize(w, h);
+            if (visualizer) {
+                visualizer.setRendererSize(w, h);
+                addLog(`📐 Größe angepasst: ${w}x${h}`, 'info');
+            }
         });
 
         // ----- Rendering-Schleife -----
         function render() {
-            visualizer.render();
+            if (visualizer) {
+                try {
+                    visualizer.render();
+                } catch (e) {
+                    // Nur einmal loggen, nicht jede Frame
+                    if (!render._errorLogged) {
+                        addLog(`❌ Render-Fehler: ${e.message}`, 'error');
+                        render._errorLogged = true;
+                    }
+                }
+            }
             requestAnimationFrame(render);
         }
         render();
+        addLog('🔄 Rendering-Schleife gestartet', 'info');
 
         // ----- Tastatur (Leertaste) -----
         document.addEventListener('keydown', (e) => {
@@ -313,7 +471,8 @@
             }
         });
 
-        console.log('✅ Bereit – lade eine MP3-Datei hoch.');
+        addLog('✅ Bereit – lade eine MP3-Datei hoch!', 'success');
+        addLog('💡 Tipp: Öffne die Browser-Konsole (F12) für mehr Details', 'info');
     </script>
 </body>
 </html>
