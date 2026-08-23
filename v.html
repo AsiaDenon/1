@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Butterchurn Debug</title>
+    <title>Butterchurn Visualizer (Debug)</title>
     <style>
         * {
             margin: 0;
@@ -164,7 +164,7 @@
         <!-- DEBUG-BEREICH -->
         <div id="debug">
             🐞 <b>Debug-Log</b><br />
-            <span id="logOutput">Warte auf Aktion...</span>
+            <span id="logOutput">Initialisiere ...</span>
         </div>
 
         <!-- STEUERUNG -->
@@ -178,20 +178,53 @@
         </div>
     </div>
 
-    <script type="importmap">
-        {
-            "imports": {
-                "butterchurn": "https://cdn.jsdelivr.net/npm/butterchurn@2.6.7/+esm",
-                "butterchurn-presets": "https://cdn.jsdelivr.net/npm/butterchurn-presets@2.6.7/+esm"
-            }
-        }
+    <!-- Bibliotheken als UMD (normale Scripts) laden -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/butterchurn/2.6.7/butterchurn.min.js">
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/butterchurn-presets@2.6.7/dist/butterchurn-presets.min.js">
     </script>
 
-    <script type="module">
-        import butterchurn from 'butterchurn';
-        import butterchurnPresets from 'butterchurn-presets';
+    <!-- Hauptskript (kein Modul, einfaches JS) -->
+    <script>
+        // ----- Debug-Logger (global) -----
+        const logs = [];
 
-        // ----- DOM -----
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            logs.push({ message, type, timestamp });
+            if (logs.length > 50) logs.shift();
+            renderLog();
+            console.log(`[${type}]`, message);
+        }
+
+        function renderLog() {
+            const output = document.getElementById('logOutput');
+            if (!output) return;
+            const html = logs.map(log => {
+                const cls = log.type;
+                return `<span class="${cls}">[${log.timestamp}] ${log.message}</span>`;
+            }).join('<br />');
+            output.innerHTML = html;
+            const debugEl = document.getElementById('debug');
+            if (debugEl) debugEl.scrollTop = debugEl.scrollHeight;
+        }
+
+        // Sofort eine erste Meldung
+        addLog('🚀 Seite geladen', 'info');
+
+        // ----- Prüfen ob Bibliotheken geladen sind -----
+        if (typeof butterchurn === 'undefined') {
+            addLog('❌ butterchurn nicht geladen!', 'error');
+        } else {
+            addLog('✅ butterchurn geladen (Version ' + (butterchurn.version || '?') + ')', 'success');
+        }
+        if (typeof butterchurnPresets === 'undefined') {
+            addLog('❌ butterchurnPresets nicht geladen!', 'error');
+        } else {
+            addLog('✅ butterchurnPresets geladen', 'success');
+        }
+
+        // ----- DOM-Elemente -----
         const canvas = document.getElementById('visualizer-canvas');
         const container = document.getElementById('container');
         const fileInput = document.getElementById('fileInput');
@@ -199,68 +232,57 @@
         const volumeControl = document.getElementById('volumeControl');
         const songName = document.getElementById('songName');
         const nextPresetBtn = document.getElementById('nextPresetBtn');
-        const logOutput = document.getElementById('logOutput');
 
-        // ----- DEBUG-LOGGER -----
-        const logs = [];
-
-        function addLog(message, type = 'info') {
-            const timestamp = new Date().toLocaleTimeString();
-            logs.push({ message, type, timestamp });
-            // Nur die letzten 50 Einträge behalten
-            if (logs.length > 50) logs.shift();
-            renderLog();
-            console.log(`[${type}]`, message);
-        }
-
-        function renderLog() {
-            const html = logs.map(log => {
-                const cls = log.type;
-                return `<span class="${cls}">[${log.timestamp}] ${log.message}</span>`;
-            }).join('<br />');
-            logOutput.innerHTML = html;
-            // Automatisch nach unten scrollen (im Debug-Container)
-            const debugEl = document.getElementById('debug');
-            debugEl.scrollTop = debugEl.scrollHeight;
-        }
-
-        addLog('🚀 Seite geladen, initialisiere...', 'info');
-
-        // ----- AudioContext & Visualizer -----
-        let audioContext;
-        try {
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            addLog(`✅ AudioContext erstellt (State: ${audioContext.state})`, 'success');
-        } catch (e) {
-            addLog(`❌ AudioContext Fehler: ${e.message}`, 'error');
-        }
-
-        const width = container.clientWidth;
-        const height = container.clientHeight;
-
-        let visualizer;
-        try {
-            visualizer = butterchurn.createVisualizer(audioContext, canvas, {
-                width: width,
-                height: height,
-                pixelRatio: window.devicePixelRatio || 1,
-            });
-            addLog(`✅ Visualizer erstellt (${width}x${height})`, 'success');
-        } catch (e) {
-            addLog(`❌ Visualizer Fehler: ${e.message}`, 'error');
-        }
-
-        // ----- Presets -----
+        // ----- AudioContext & Visualizer (erst wenn Bibliotheken da) -----
+        let audioContext = null;
+        let visualizer = null;
+        let currentSourceNode = null;
+        let currentAnalyser = null;
+        let currentAudioElement = null;
+        let isPlaying = false;
         let presetKeys = [];
-        try {
-            const presets = butterchurnPresets.getPresets();
-            presetKeys = Object.keys(presets);
-            addLog(`✅ ${presetKeys.length} Presets geladen`, 'success');
-        } catch (e) {
-            addLog(`❌ Presets Fehler: ${e.message}`, 'error');
+
+        function initVisualizer() {
+            if (typeof butterchurn === 'undefined') {
+                addLog('❌ Butterchurn nicht verfügbar – Initialisierung abgebrochen', 'error');
+                return;
+            }
+
+            try {
+                audioContext = new(window.AudioContext || window.webkitAudioContext)();
+                addLog(`✅ AudioContext erstellt (State: ${audioContext.state})`, 'success');
+
+                const width = container.clientWidth;
+                const height = container.clientHeight;
+
+                visualizer = butterchurn.createVisualizer(audioContext, canvas, {
+                    width: width,
+                    height: height,
+                    pixelRatio: window.devicePixelRatio || 1,
+                });
+                addLog(`✅ Visualizer erstellt (${width}x${height})`, 'success');
+
+                // Presets laden
+                if (typeof butterchurnPresets !== 'undefined') {
+                    const presets = butterchurnPresets.getPresets();
+                    presetKeys = Object.keys(presets);
+                    addLog(`✅ ${presetKeys.length} Presets geladen`, 'success');
+                    loadRandomPreset();
+                } else {
+                    addLog('⚠️ Keine Presets – verwende Standard', 'warn');
+                }
+
+                // Rendering starten
+                renderLoop();
+
+            } catch (e) {
+                addLog(`❌ Fehler bei Initialisierung: ${e.message}`, 'error');
+                console.error(e);
+            }
         }
 
         function loadRandomPreset() {
+            if (!visualizer) return;
             if (presetKeys.length === 0) {
                 addLog('⚠️ Keine Presets verfügbar', 'warn');
                 return;
@@ -269,133 +291,45 @@
                 const idx = Math.floor(Math.random() * presetKeys.length);
                 const presets = butterchurnPresets.getPresets();
                 visualizer.loadPreset(presets[presetKeys[idx]], 0.0);
-                addLog(`🎨 Preset geladen: ${presetKeys[idx].slice(0, 40)}...`, 'info');
+                addLog(`🎨 Preset: ${presetKeys[idx].slice(0, 40)}...`, 'info');
             } catch (e) {
                 addLog(`❌ Preset-Fehler: ${e.message}`, 'error');
             }
         }
-        loadRandomPreset();
 
-        // ----- Zustand -----
-        let currentSourceNode = null;
-        let currentAnalyser = null;
-        let currentAudioElement = null;
-        let isPlaying = false;
+        // ----- Rendering-Schleife -----
+        let renderErrorLogged = false;
 
-        // ----- Datei auswählen (mit Debug) -----
-        fileInput.addEventListener('change', (event) => {
+        function renderLoop() {
+            if (visualizer) {
+                try {
+                    visualizer.render();
+                } catch (e) {
+                    if (!renderErrorLogged) {
+                        addLog(`❌ Render-Fehler: ${e.message}`, 'error');
+                        renderErrorLogged = true;
+                    }
+                }
+            }
+            requestAnimationFrame(renderLoop);
+        }
+
+        // ----- Datei auswählen (doppelt abgesichert) -----
+        function handleFileSelect(event) {
             const file = event.target.files[0];
             addLog(`📂 Datei ausgewählt: ${file ? file.name : 'keine'}`, 'info');
 
             if (!file) {
-                addLog('⚠️ Keine Datei im Input', 'warn');
                 songName.textContent = '❌ Keine Datei';
-                return;
-            }
-
-            // Prüfen ob Datei wirklich lesbar ist
-            if (file.size === 0) {
-                addLog('❌ Datei ist leer (0 Bytes)', 'error');
-                songName.textContent = '❌ Leere Datei';
                 return;
             }
 
             // Dateiname anzeigen
             const displayName = file.name.length > 25 ? file.name.slice(0, 22) + '…' : file.name;
             songName.textContent = displayName;
-            addLog(`📄 Dateiname: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`, 'info');
 
-            // Alte Verbindungen trennen
-            try {
-                if (currentSourceNode) {
-                    currentSourceNode.disconnect();
-                    currentSourceNode = null;
-                    addLog('🔌 Alte Quelle getrennt', 'info');
-                }
-                if (currentAudioElement) {
-                    currentAudioElement.pause();
-                    currentAudioElement.src = '';
-                    currentAudioElement = null;
-                    addLog('⏹️ Altes Audio-Element gestoppt', 'info');
-                }
-            } catch (e) {
-                addLog(`⚠️ Fehler beim Trennen: ${e.message}`, 'warn');
-            }
-
-            // AudioContext starten (falls nötig) – WICHTIG!
-            if (audioContext.state === 'suspended') {
-                addLog('⏳ AudioContext ist suspended – versuche zu resume...', 'warn');
-                audioContext.resume().then(() => {
-                    addLog(`✅ AudioContext resumed (State: ${audioContext.state})`, 'success');
-                }).catch(err => {
-                    addLog(`❌ Resume fehlgeschlagen: ${err.message}`, 'error');
-                    songName.textContent = '❌ AudioContext Fehler';
-                    return;
-                });
-            }
-
-            // Audio-Element erstellen
-            try {
-                const audioElement = new Audio();
-                const objectUrl = URL.createObjectURL(file);
-                audioElement.src = objectUrl;
-                audioElement.loop = false;
-                audioElement.volume = volumeControl.value;
-                addLog(`🔊 Audio-Element erstellt, URL: ${objectUrl.slice(0, 40)}...`, 'info');
-
-                // MediaElementSource
-                const source = audioContext.createMediaElementSource(audioElement);
-                addLog('🔗 MediaElementSource erstellt', 'success');
-
-                const analyser = audioContext.createAnalyser();
-                analyser.fftSize = 512;
-                addLog(`📊 Analyser erstellt (fftSize: ${analyser.fftSize})`, 'success');
-
-                // Verbinden
-                source.connect(analyser);
-                analyser.connect(audioContext.destination);
-                visualizer.connectAudio(analyser);
-                addLog('🔗 Audio-Pfad verbunden: Quelle → Analyser → Destination + Visualizer', 'success');
-
-                currentSourceNode = source;
-                currentAnalyser = analyser;
-                currentAudioElement = audioElement;
-
-                // AUTOMATISCH ABSPIELEN
-                addLog('▶️ Versuche automatische Wiedergabe...', 'info');
-                audioElement.play().then(() => {
-                    isPlaying = true;
-                    playBtn.textContent = '⏸️';
-                    addLog('✅ Wiedergabe erfolgreich gestartet! 🎵', 'success');
-                }).catch(err => {
-                    addLog(`⚠️ Autoplay blockiert: ${err.message}`, 'warn');
-                    isPlaying = false;
-                    playBtn.textContent = '▶️';
-                    songName.textContent = '⏸️ ' + displayName;
-                    // Zeige dem Nutzer, dass er klicken muss
-                    addLog('👉 Bitte auf Play-Button klicken, um zu starten', 'info');
-                });
-
-                fileInput.value = '';
-
-            } catch (error) {
-                addLog(`❌ Fehler beim Laden: ${error.message}`, 'error');
-                console.error(error);
-                songName.textContent = '❌ Fehler: ' + error.message.slice(0, 30);
-            }
-        });
-
-        // ----- Play / Pause -----
-        playBtn.addEventListener('click', () => {
-            addLog(`🔄 Play/Pause geklickt (AudioContext: ${audioContext.state})`, 'info');
-
-            if (!currentAudioElement) {
-                addLog('📂 Kein Song geladen – öffne Datei-Dialog', 'info');
-                fileInput.click();
-                return;
-            }
-
-            if (audioContext.state === 'suspended') {
+            // AudioContext starten (falls suspendiert)
+            if (audioContext && audioContext.state === 'suspended') {
                 addLog('⏳ AudioContext wird resumed...', 'warn');
                 audioContext.resume().then(() => {
                     addLog(`✅ AudioContext resumed (State: ${audioContext.state})`, 'success');
@@ -404,6 +338,81 @@
                 });
             }
 
+            // Alte Verbindungen trennen
+            try {
+                if (currentSourceNode) {
+                    currentSourceNode.disconnect();
+                    currentSourceNode = null;
+                }
+                if (currentAudioElement) {
+                    currentAudioElement.pause();
+                    currentAudioElement.src = '';
+                    currentAudioElement = null;
+                }
+            } catch (e) { /* ignoriere */ }
+
+            // Neues Audio-Element
+            try {
+                const audioElement = new Audio();
+                const objectUrl = URL.createObjectURL(file);
+                audioElement.src = objectUrl;
+                audioElement.loop = false;
+                audioElement.volume = volumeControl.value;
+
+                if (!audioContext) {
+                    addLog('❌ Kein AudioContext – erstelle neuen', 'error');
+                    audioContext = new(window.AudioContext || window.webkitAudioContext)();
+                }
+
+                const source = audioContext.createMediaElementSource(audioElement);
+                const analyser = audioContext.createAnalyser();
+                analyser.fftSize = 512;
+
+                source.connect(analyser);
+                analyser.connect(audioContext.destination);
+                if (visualizer) {
+                    visualizer.connectAudio(analyser);
+                } else {
+                    addLog('⚠️ Visualizer nicht bereit – Audio wird nicht visualisiert', 'warn');
+                }
+
+                currentSourceNode = source;
+                currentAnalyser = analyser;
+                currentAudioElement = audioElement;
+
+                // Automatisch abspielen
+                audioElement.play().then(() => {
+                    isPlaying = true;
+                    playBtn.textContent = '⏸️';
+                    addLog('✅ Wiedergabe gestartet 🎵', 'success');
+                }).catch(err => {
+                    addLog(`⚠️ Autoplay blockiert: ${err.message} – klicke Play`, 'warn');
+                    isPlaying = false;
+                    playBtn.textContent = '▶️';
+                });
+
+                fileInput.value = '';
+
+            } catch (error) {
+                addLog(`❌ Fehler beim Laden: ${error.message}`, 'error');
+                console.error(error);
+                songName.textContent = '❌ Fehler';
+            }
+        }
+
+        // Event-Listener für File-Input (zwei Varianten zur Sicherheit)
+        fileInput.addEventListener('change', handleFileSelect);
+        fileInput.onchange = handleFileSelect; // Fallback
+
+        // ----- Play / Pause -----
+        playBtn.addEventListener('click', function() {
+            if (!currentAudioElement) {
+                fileInput.click();
+                return;
+            }
+            if (audioContext && audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
             if (isPlaying) {
                 currentAudioElement.pause();
                 playBtn.textContent = '▶️';
@@ -411,9 +420,9 @@
                 addLog('⏸️ Pause', 'info');
             } else {
                 currentAudioElement.play().then(() => {
-                    addLog('▶️ Wiedergabe gestartet', 'success');
                     playBtn.textContent = '⏸️';
                     isPlaying = true;
+                    addLog('▶️ Wiedergabe gestartet', 'success');
                 }).catch(err => {
                     addLog(`❌ Play fehlgeschlagen: ${err.message}`, 'error');
                 });
@@ -421,49 +430,28 @@
         });
 
         // ----- Nächstes Preset -----
-        nextPresetBtn.addEventListener('click', () => {
-            addLog('🎨 Nächstes Preset angefordert', 'info');
+        nextPresetBtn.addEventListener('click', function() {
             loadRandomPreset();
         });
 
         // ----- Lautstärke -----
-        volumeControl.addEventListener('input', () => {
+        volumeControl.addEventListener('input', function() {
             if (currentAudioElement) {
                 currentAudioElement.volume = volumeControl.value;
-                addLog(`🔊 Lautstärke: ${volumeControl.value}`, 'info');
             }
         });
 
         // ----- Größenänderung -----
-        window.addEventListener('resize', () => {
-            const w = container.clientWidth;
-            const h = container.clientHeight;
+        window.addEventListener('resize', function() {
             if (visualizer) {
+                const w = container.clientWidth;
+                const h = container.clientHeight;
                 visualizer.setRendererSize(w, h);
-                addLog(`📐 Größe angepasst: ${w}x${h}`, 'info');
             }
         });
 
-        // ----- Rendering-Schleife -----
-        function render() {
-            if (visualizer) {
-                try {
-                    visualizer.render();
-                } catch (e) {
-                    // Nur einmal loggen, nicht jede Frame
-                    if (!render._errorLogged) {
-                        addLog(`❌ Render-Fehler: ${e.message}`, 'error');
-                        render._errorLogged = true;
-                    }
-                }
-            }
-            requestAnimationFrame(render);
-        }
-        render();
-        addLog('🔄 Rendering-Schleife gestartet', 'info');
-
         // ----- Tastatur (Leertaste) -----
-        document.addEventListener('keydown', (e) => {
+        document.addEventListener('keydown', function(e) {
             if (e.target.tagName === 'INPUT') return;
             if (e.code === 'Space') {
                 e.preventDefault();
@@ -471,8 +459,26 @@
             }
         });
 
-        addLog('✅ Bereit – lade eine MP3-Datei hoch!', 'success');
-        addLog('💡 Tipp: Öffne die Browser-Konsole (F12) für mehr Details', 'info');
+        // ----- Starte den Visualizer, sobald Bibliotheken geladen sind -----
+        if (typeof butterchurn !== 'undefined' && typeof butterchurnPresets !== 'undefined') {
+            initVisualizer();
+        } else {
+            // Warte auf die Bibliotheken (maximal 5 Sekunden)
+            let attempts = 0;
+            const waitInterval = setInterval(() => {
+                attempts++;
+                if (typeof butterchurn !== 'undefined' && typeof butterchurnPresets !== 'undefined') {
+                    clearInterval(waitInterval);
+                    addLog('✅ Bibliotheken nachgeladen, starte Visualizer', 'success');
+                    initVisualizer();
+                } else if (attempts > 20) {
+                    clearInterval(waitInterval);
+                    addLog('❌ Bibliotheken nicht geladen – bitte Seite neu laden oder CDN prüfen', 'error');
+                }
+            }, 250);
+        }
+
+        addLog('💡 Wähle eine MP3-Datei aus – das Debug-Log zeigt jeden Schritt.', 'info');
     </script>
 </body>
 </html>
