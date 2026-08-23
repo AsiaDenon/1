@@ -3,13 +3,9 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Butterchurn Visualizer (Debug)</title>
+    <title>Butterchurn MP3 Visualizer</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             background: #0a0a0a;
             display: flex;
@@ -28,7 +24,7 @@
             background: #111;
             border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+            box-shadow: 0 0 40px rgba(0,0,0,0.8);
         }
         canvas {
             display: block;
@@ -36,7 +32,6 @@
             height: 100%;
         }
 
-        /* ----- Steuerung ----- */
         #controls {
             position: absolute;
             bottom: 20px;
@@ -47,15 +42,15 @@
             align-items: center;
             gap: 10px;
             padding: 12px 18px;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0,0,0,0.7);
             backdrop-filter: blur(8px);
             border-radius: 50px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255,255,255,0.08);
             flex-wrap: wrap;
             z-index: 10;
         }
         #controls button {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255,255,255,0.1);
             border: none;
             color: white;
             font-size: 18px;
@@ -65,12 +60,8 @@
             cursor: pointer;
             transition: background 0.2s;
         }
-        #controls button:hover {
-            background: rgba(255, 255, 255, 0.25);
-        }
-        #controls input[type="file"] {
-            display: none;
-        }
+        #controls button:hover { background: rgba(255,255,255,0.25); }
+        #controls input[type="file"] { display: none; }
         .file-label {
             background: #6c5ce7;
             color: white;
@@ -82,15 +73,10 @@
             transition: background 0.2s;
             white-space: nowrap;
         }
-        .file-label:hover {
-            background: #5541d9;
-        }
-        #volumeControl {
-            width: 60px;
-            accent-color: #6c5ce7;
-        }
+        .file-label:hover { background: #5541d9; }
+        #volumeControl { width: 60px; accent-color: #6c5ce7; }
         #songName {
-            color: rgba(255, 255, 255, 0.8);
+            color: rgba(255,255,255,0.8);
             font-size: 13px;
             max-width: 150px;
             overflow: hidden;
@@ -100,45 +86,31 @@
             text-align: center;
         }
 
-        /* ----- DEBUG-BEREICH (oben rechts) ----- */
         #debug {
             position: absolute;
             top: 15px;
             right: 15px;
-            background: rgba(0, 0, 0, 0.85);
+            background: rgba(0,0,0,0.85);
             backdrop-filter: blur(6px);
             color: #0f0;
             font-family: 'Courier New', monospace;
             font-size: 12px;
             padding: 12px 16px;
             border-radius: 10px;
-            border: 1px solid rgba(0, 255, 0, 0.2);
+            border: 1px solid rgba(0,255,0,0.2);
             max-width: 360px;
             max-height: 70%;
             overflow-y: auto;
             z-index: 20;
             line-height: 1.6;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
         }
-        #debug .error {
-            color: #ff6b6b;
-        }
-        #debug .success {
-            color: #51cf66;
-        }
-        #debug .info {
-            color: #74c0fc;
-        }
-        #debug .warn {
-            color: #fcc419;
-        }
-        #debug::-webkit-scrollbar {
-            width: 4px;
-        }
-        #debug::-webkit-scrollbar-thumb {
-            background: #333;
-            border-radius: 4px;
-        }
+        #debug .error { color: #ff6b6b; }
+        #debug .success { color: #51cf66; }
+        #debug .info { color: #74c0fc; }
+        #debug .warn { color: #fcc419; }
+        #debug::-webkit-scrollbar { width: 4px; }
+        #debug::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
         #debug .header {
             display: flex;
             justify-content: space-between;
@@ -146,7 +118,7 @@
             margin-bottom: 6px;
         }
         #debug .header button {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255,255,255,0.1);
             border: none;
             color: #aaa;
             font-size: 12px;
@@ -157,13 +129,10 @@
             font-family: inherit;
         }
         #debug .header button:hover {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255,255,255,0.2);
             color: white;
         }
-        #logOutput {
-            display: block;
-            word-wrap: break-word;
-        }
+        #logOutput { display: block; word-wrap: break-word; }
 
         @media (max-width: 700px) {
             #debug {
@@ -185,18 +154,16 @@
     <div id="container">
         <canvas id="visualizer-canvas"></canvas>
 
-        <!-- DEBUG-BEREICH mit Copy-Button -->
         <div id="debug">
             <div class="header">
                 <b>🐞 Debug-Log</b>
-                <button id="copyDebugBtn" title="Log in die Zwischenablage kopieren">📋 Kopieren</button>
+                <button id="copyDebugBtn" title="Log kopieren">📋 Kopieren</button>
             </div>
-            <span id="logOutput">Initialisiere ...</span>
+            <span id="logOutput">Lade Bibliotheken ...</span>
         </div>
 
-        <!-- STEUERUNG -->
         <div id="controls">
-            <button id="playBtn" title="Play / Pause">⏸️</button>
+            <button id="playBtn" title="Play/Pause">⏸️</button>
             <label class="file-label" for="fileInput">📂 MP3 laden</label>
             <input type="file" id="fileInput" accept=".mp3,.wav,.ogg,.m4a,.aac" />
             <button id="nextPresetBtn" title="Nächstes Preset">🎨</button>
@@ -205,32 +172,7 @@
         </div>
     </div>
 
-    <!-- Bibliotheken als UMD (normale Scripts) laden – VERSCHIEDENE CDNs -->
-    <script src="https://unpkg.com/butterchurn@2.6.7/dist/butterchurn.min.js">
-    </script>
-    <script src="https://unpkg.com/butterchurn-presets@2.6.7/dist/butterchurn-presets.min.js">
-    </script>
-
-    <!-- FALLBACK: Falls unpkg nicht geht, lade von cdnjs -->
-    <script>
-        // Prüfe nach 2 Sekunden, ob die Bibliotheken geladen sind
-        setTimeout(function() {
-            if (typeof butterchurn === 'undefined') {
-                // Lade von cdnjs nach
-                var script1 = document.createElement('script');
-                script1.src = 'https://cdnjs.cloudflare.com/ajax/libs/butterchurn/2.6.7/butterchurn.min.js';
-                document.head.appendChild(script1);
-            }
-            if (typeof butterchurnPresets === 'undefined') {
-                var script2 = document.createElement('script');
-                script2.src = 'https://cdnjs.cloudflare.com/ajax/libs/butterchurn-presets/2.6.7/butterchurn-presets.min.js';
-                document.head.appendChild(script2);
-            }
-        }, 2000);
-    </script>
-
-    <!-- Hauptskript -->
-    <script>
+    <script type="module">
         // ----- Debug-Logger -----
         const logs = [];
 
@@ -245,39 +187,33 @@
         function renderLog() {
             const output = document.getElementById('logOutput');
             if (!output) return;
-            const html = logs.map(log => {
-                const cls = log.type;
-                const icon = log.type === 'error' ? '❌' :
-                    log.type === 'success' ? '✅' :
-                    log.type === 'warn' ? '⚠️' : 'ℹ️';
-                return `<span class="${cls}">${icon} [${log.timestamp}] ${log.message}</span>`;
-            }).join('<br />');
+            const icons = { error: '❌', success: '✅', warn: '⚠️', info: 'ℹ️' };
+            const html = logs.map(log =>
+                `<span class="${log.type}">${icons[log.type] || 'ℹ️'} [${log.timestamp}] ${log.message}</span>`
+            ).join('<br />');
             output.innerHTML = html;
             const debugEl = document.getElementById('debug');
             if (debugEl) debugEl.scrollTop = debugEl.scrollHeight;
         }
 
-        // ----- Copy-Button -----
-        document.getElementById('copyDebugBtn').addEventListener('click', function() {
-            const text = logs.map(log => `[${log.timestamp}] ${log.type.toUpperCase()}: ${log.message}`).join('\n');
-            navigator.clipboard.writeText(text).then(() => {
-                const btn = this;
-                const orig = btn.textContent;
-                btn.textContent = '✅ Kopiert!';
-                setTimeout(() => { btn.textContent = orig; }, 2000);
-            }).catch(() => {
-                // Fallback: manuell kopieren
-                const textarea = document.createElement('textarea');
-                textarea.value = text;
-                document.body.appendChild(textarea);
-                textarea.select();
+        document.getElementById('copyDebugBtn').addEventListener('click', async function() {
+            const text = logs.map(l => `[${l.timestamp}] ${l.type.toUpperCase()}: ${l.message}`).join('\n');
+            try {
+                await navigator.clipboard.writeText(text);
+                const orig = this.textContent;
+                this.textContent = '✅ Kopiert!';
+                setTimeout(() => { this.textContent = orig; }, 2000);
+            } catch {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
                 document.execCommand('copy');
-                document.body.removeChild(textarea);
-                alert('Log kopiert!');
-            });
+                document.body.removeChild(ta);
+                alert('Kopiert!');
+            }
         });
 
-        // Sofort erste Meldung
         addLog('🚀 Seite geladen', 'info');
 
         // ----- DOM -----
@@ -289,7 +225,8 @@
         const songName = document.getElementById('songName');
         const nextPresetBtn = document.getElementById('nextPresetBtn');
 
-        // ----- Globale Variablen -----
+        // ----- Dynamischer Import von butterchurn -----
+        let butterchurn, butterchurnPresets;
         let audioContext = null;
         let visualizer = null;
         let currentSourceNode = null;
@@ -297,20 +234,50 @@
         let currentAudioElement = null;
         let isPlaying = false;
         let presetKeys = [];
-        let isInitialized = false;
+        let isReady = false;
 
-        // ----- Visualizer initialisieren -----
+        async function loadButterchurn() {
+            try {
+                addLog('⏳ Lade butterchurn per ESM...', 'info');
+
+                // Butterchurn importieren (ESM von CDN)
+                butterchurn = await import('https://cdn.jsdelivr.net/npm/butterchurn@2.6.7/+esm');
+                butterchurn = butterchurn.default || butterchurn;
+                addLog('✅ butterchurn geladen', 'success');
+
+                butterchurnPresets = await import('https://cdn.jsdelivr.net/npm/butterchurn-presets@2.6.7/+esm');
+                butterchurnPresets = butterchurnPresets.default || butterchurnPresets;
+                addLog('✅ butterchurn-presets geladen', 'success');
+
+                initVisualizer();
+            } catch (err) {
+                addLog(`❌ Fehler beim Laden: ${err.message}`, 'error');
+                console.error(err);
+                // Zweiter Versuch mit anderer Quelle
+                try {
+                    addLog('⏳ Versuche alternativen CDN...', 'warn');
+                    butterchurn = await import('https://unpkg.com/butterchurn@2.6.7/+esm');
+                    butterchurn = butterchurn.default || butterchurn;
+                    addLog('✅ butterchurn (unpkg) geladen', 'success');
+                    butterchurnPresets = await import('https://unpkg.com/butterchurn-presets@2.6.7/+esm');
+                    butterchurnPresets = butterchurnPresets.default || butterchurnPresets;
+                    addLog('✅ butterchurn-presets (unpkg) geladen', 'success');
+                    initVisualizer();
+                } catch (err2) {
+                    addLog(`❌ Auch alternativer CDN fehlgeschlagen: ${err2.message}`, 'error');
+                }
+            }
+        }
+
         function initVisualizer() {
-            if (isInitialized) return;
-            if (typeof butterchurn === 'undefined') {
-                addLog('⏳ Warte auf butterchurn...', 'warn');
-                setTimeout(initVisualizer, 500);
+            if (!butterchurn || !butterchurnPresets) {
+                addLog('❌ Bibliotheken nicht verfügbar', 'error');
                 return;
             }
 
             try {
                 audioContext = new(window.AudioContext || window.webkitAudioContext)();
-                addLog(`✅ AudioContext erstellt (State: ${audioContext.state})`, 'success');
+                addLog(`✅ AudioContext erstellt (${audioContext.state})`, 'success');
 
                 const width = container.clientWidth;
                 const height = container.clientHeight;
@@ -323,91 +290,63 @@
                 addLog(`✅ Visualizer erstellt (${width}x${height})`, 'success');
 
                 // Presets laden
-                if (typeof butterchurnPresets !== 'undefined') {
-                    try {
-                        const presets = butterchurnPresets.getPresets();
-                        presetKeys = Object.keys(presets);
-                        addLog(`✅ ${presetKeys.length} Presets geladen`, 'success');
-                        loadRandomPreset();
-                    } catch (e) {
-                        addLog(`⚠️ Presets laden fehlgeschlagen: ${e.message}`, 'warn');
-                    }
-                } else {
-                    addLog('⚠️ Keine Presets – verwende Fallback', 'warn');
-                }
+                const presets = butterchurnPresets.getPresets();
+                presetKeys = Object.keys(presets);
+                addLog(`✅ ${presetKeys.length} Presets geladen`, 'success');
 
-                isInitialized = true;
+                // Zufälliges Preset laden
+                const randomKey = presetKeys[Math.floor(Math.random() * presetKeys.length)];
+                visualizer.loadPreset(presets[randomKey], 0.0);
+                addLog(`🎨 Preset: ${randomKey.slice(0, 40)}...`, 'info');
+
+                isReady = true;
                 renderLoop();
-                addLog('✅ Bereit – lade eine MP3!', 'success');
+                addLog('✅ Bereit! Lade eine MP3-Datei.', 'success');
 
             } catch (e) {
                 addLog(`❌ Fehler: ${e.message}`, 'error');
                 console.error(e);
-                setTimeout(initVisualizer, 1000);
             }
         }
-
-        function loadRandomPreset() {
-            if (!visualizer) return;
-            if (presetKeys.length === 0) {
-                addLog('⚠️ Keine Presets verfügbar', 'warn');
-                return;
-            }
-            try {
-                const idx = Math.floor(Math.random() * presetKeys.length);
-                const presets = butterchurnPresets.getPresets();
-                visualizer.loadPreset(presets[presetKeys[idx]], 0.0);
-                addLog(`🎨 Preset: ${presetKeys[idx].slice(0, 40)}...`, 'info');
-            } catch (e) {
-                addLog(`❌ Preset-Fehler: ${e.message}`, 'error');
-            }
-        }
-
-        // ----- Rendering -----
-        let renderErrorLogged = false;
 
         function renderLoop() {
             if (visualizer) {
-                try {
-                    visualizer.render();
-                } catch (e) {
-                    if (!renderErrorLogged) {
-                        addLog(`❌ Render-Fehler: ${e.message}`, 'error');
-                        renderErrorLogged = true;
-                    }
-                }
+                try { visualizer.render(); } catch (e) {}
             }
             requestAnimationFrame(renderLoop);
+        }
+
+        function loadRandomPreset() {
+            if (!visualizer || presetKeys.length === 0) return;
+            const idx = Math.floor(Math.random() * presetKeys.length);
+            const presets = butterchurnPresets.getPresets();
+            visualizer.loadPreset(presets[presetKeys[idx]], 0.0);
+            addLog(`🎨 Preset: ${presetKeys[idx].slice(0, 40)}...`, 'info');
         }
 
         // ----- Datei auswählen -----
         function handleFileSelect(event) {
             const file = event.target.files[0];
-            addLog(`📂 Datei: ${file ? file.name : 'keine'}`, 'info');
-
             if (!file) {
-                songName.textContent = '❌ Keine Datei';
+                addLog('⚠️ Keine Datei', 'warn');
                 return;
             }
 
             const displayName = file.name.length > 25 ? file.name.slice(0, 22) + '…' : file.name;
             songName.textContent = displayName;
-            addLog(`📄 ${file.name} (${(file.size / 1024).toFixed(0)} KB)`, 'info');
+            addLog(`📂 Datei: ${file.name} (${(file.size/1024).toFixed(0)} KB)`, 'info');
 
-            // AudioContext starten
-            if (!audioContext) {
-                addLog('⏳ AudioContext wird erstellt...', 'warn');
-                audioContext = new(window.AudioContext || window.webkitAudioContext)();
-            }
-            if (audioContext.state === 'suspended') {
-                audioContext.resume().then(() => {
-                    addLog(`✅ AudioContext resumed (${audioContext.state})`, 'success');
-                }).catch(err => {
-                    addLog(`❌ Resume fehlgeschlagen: ${err.message}`, 'error');
-                });
+            if (!isReady) {
+                addLog('⚠️ Visualizer noch nicht bereit – warte...', 'warn');
+                if (!audioContext) {
+                    audioContext = new(window.AudioContext || window.webkitAudioContext)();
+                }
             }
 
-            // Alte Verbindungen trennen
+            if (audioContext && audioContext.state === 'suspended') {
+                audioContext.resume().catch(e => addLog(`❌ Resume fehlgeschlagen: ${e.message}`, 'error'));
+            }
+
             try {
                 if (currentSourceNode) { currentSourceNode.disconnect();
                     currentSourceNode = null; }
@@ -416,15 +355,16 @@
                     currentAudioElement.src = '';
                     currentAudioElement = null;
                 }
-            } catch (e) { /* ignoriere */ }
 
-            // Neues Audio-Element
-            try {
                 const audioElement = new Audio();
                 const objectUrl = URL.createObjectURL(file);
                 audioElement.src = objectUrl;
                 audioElement.loop = false;
                 audioElement.volume = volumeControl.value;
+
+                if (!audioContext) {
+                    audioContext = new(window.AudioContext || window.webkitAudioContext)();
+                }
 
                 const source = audioContext.createMediaElementSource(audioElement);
                 const analyser = audioContext.createAnalyser();
@@ -444,7 +384,6 @@
                 currentAnalyser = analyser;
                 currentAudioElement = audioElement;
 
-                // Abspielen
                 audioElement.play().then(() => {
                     isPlaying = true;
                     playBtn.textContent = '⏸️';
@@ -489,17 +428,12 @@
         });
 
         nextPresetBtn.addEventListener('click', function() {
-            if (!visualizer) {
-                addLog('⚠️ Visualizer nicht bereit', 'warn');
-                return;
-            }
-            loadRandomPreset();
+            if (isReady) loadRandomPreset();
+            else addLog('⚠️ Visualizer nicht bereit', 'warn');
         });
 
         volumeControl.addEventListener('input', function() {
-            if (currentAudioElement) {
-                currentAudioElement.volume = volumeControl.value;
-            }
+            if (currentAudioElement) currentAudioElement.volume = volumeControl.value;
         });
 
         window.addEventListener('resize', function() {
@@ -514,17 +448,9 @@
                 playBtn.click(); }
         });
 
-        // ----- Starte Initialisierung -----
-        addLog('⏳ Lade butterchurn von CDN...', 'info');
-        initVisualizer();
-
-        // Prüfe nach 5 Sekunden, ob Visualizer da ist
-        setTimeout(function() {
-            if (!isInitialized) {
-                addLog('⏳ Visualizer noch nicht bereit – versuche erneut...', 'warn');
-                initVisualizer();
-            }
-        }, 5000);
+        // ----- Start -----
+        addLog('⏳ Lade butterchurn per ESM...', 'info');
+        loadButterchurn();
 
         addLog('💡 Wähle eine MP3-Datei', 'info');
     </script>
