@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Butterchurn Visualizer</title>
+    <title>Visualizer – 6 Modi</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -85,6 +85,13 @@
             min-width: 50px;
             text-align: center;
         }
+        #modeLabel {
+            color: rgba(255,255,255,0.6);
+            font-size: 12px;
+            padding: 0 6px;
+            min-width: 60px;
+            text-align: center;
+        }
 
         #debug {
             position: absolute;
@@ -146,6 +153,7 @@
             #controls { padding: 8px 12px; gap: 6px; }
             .file-label { font-size: 11px; padding: 5px 12px; }
             #songName { max-width: 80px; font-size: 11px; }
+            #modeLabel { font-size: 10px; min-width: 40px; }
         }
     </style>
 </head>
@@ -166,28 +174,13 @@
             <button id="playBtn" title="Play/Pause">⏸️</button>
             <label class="file-label" for="fileInput">📂 MP3 laden</label>
             <input type="file" id="fileInput" accept=".mp3,.wav,.ogg,.m4a,.aac" />
-            <button id="nextPresetBtn" title="Nächstes Preset">🎨</button>
+            <button id="modeBtn" title="Visualisierungsmodus wechseln">🔄</button>
+            <span id="modeLabel">Balken</span>
             <input type="range" id="volumeControl" min="0" max="1" step="0.05" value="0.8" />
             <span id="songName">Keine Datei</span>
         </div>
     </div>
 
-    <!-- BUTTERCHURN DIREKT EINGEBETTET (kein externer Download nötig) -->
-    <script>
-        // Butterchurn wird hier vollständig eingebettet.
-        // Aus Platzgründen zeige ich hier den Aufbau – die vollständige Datei
-        // wird als separater Download bereitgestellt.
-        // 
-        // Für die praktische Nutzung: Ich habe eine kompakte Version von Butterchurn
-        // erstellt, die alle Funktionen enthält und nur 450KB groß ist.
-        // 
-        // Lade die vollständige Datei hier herunter:
-        // https://pastebin.com/raw/7qX9kM4M
-        // 
-        // ODER verwende diesen vereinfachten Visualizer ohne Butterchurn:
-    </script>
-
-    <!-- FALLBACK: Einfacher Canvas-Visualizer (funktioniert immer!) -->
     <script>
         // ----- Debug-Logger -----
         const logs = [];
@@ -239,7 +232,8 @@
         const playBtn = document.getElementById('playBtn');
         const volumeControl = document.getElementById('volumeControl');
         const songName = document.getElementById('songName');
-        const nextPresetBtn = document.getElementById('nextPresetBtn');
+        const modeBtn = document.getElementById('modeBtn');
+        const modeLabel = document.getElementById('modeLabel');
 
         // ----- Audio-Variablen -----
         let audioContext = null;
@@ -249,94 +243,305 @@
         let isPlaying = false;
         let animationId = null;
 
-        // ----- EINFACHER CANVAS-VISUALIZER (funktioniert immer!) -----
-        function initSimpleVisualizer() {
-            try {
-                audioContext = new(window.AudioContext || window.webkitAudioContext)();
-                addLog(`✅ AudioContext erstellt (${audioContext.state})`, 'success');
-                addLog('✅ Einfacher Visualizer bereit (ohne Butterchurn)', 'success');
-                addLog('💡 Lade eine MP3-Datei', 'info');
-                return true;
-            } catch (e) {
-                addLog(`❌ Fehler: ${e.message}`, 'error');
-                return false;
+        // ----- Visualisierungsmodi -----
+        const MODES = ['balken', 'wellen', 'kreis', 'feuerwerk', 'lissajous', 'wirbel'];
+        const MODE_NAMES = {
+            balken: '📊 Balken',
+            wellen: '🌊 Wellen',
+            kreis: '⭕ Kreis',
+            feuerwerk: '🎆 Feuerwerk',
+            lissajous: '💫 Lissajous',
+            wirbel: '🌀 Wirbel'
+        };
+        let currentModeIndex = 0;
+        let mode = MODES[0];
+
+        // ----- Canvas-Größe anpassen -----
+        function resizeCanvas() {
+            const rect = container.getBoundingClientRect();
+            canvas.width = rect.width * (window.devicePixelRatio || 1);
+            canvas.height = rect.height * (window.devicePixelRatio || 1);
+            canvas.style.width = rect.width + 'px';
+            canvas.style.height = rect.height + 'px';
+        }
+
+        // ----- Zeichenfunktionen für jeden Modus -----
+        function drawBars(dataArray, ctx, w, h) {
+            const bufferLength = dataArray.length;
+            const barWidth = (w / bufferLength) * 2.5;
+
+            // Hintergrund
+            const grad = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 1.5);
+            grad.addColorStop(0, '#1a0a2e');
+            grad.addColorStop(1, '#0a0a0a');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, w, h);
+
+            for (let i = 0; i < bufferLength; i++) {
+                const value = dataArray[i] / 255;
+                const barHeight = value * h * 0.8;
+                const hue = (i / bufferLength) * 360 + Date.now() / 50;
+                ctx.fillStyle = `hsl(${hue % 360}, 100%, 60%)`;
+                const x = i * (barWidth + 1);
+                const y = h - barHeight;
+                ctx.shadowColor = `hsla(${hue % 360}, 100%, 60%, 0.3)`;
+                ctx.shadowBlur = 10;
+                ctx.beginPath();
+                ctx.roundRect(x, y, barWidth, barHeight, 3);
+                ctx.fill();
+                ctx.shadowBlur = 0;
             }
         }
 
-        // ----- Visualisierung zeichnen (Canvas) -----
+        function drawWaves(dataArray, ctx, w, h) {
+            // Hintergrund
+            const grad = ctx.createLinearGradient(0, 0, 0, h);
+            grad.addColorStop(0, '#0a0a2e');
+            grad.addColorStop(1, '#0a0a0a');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, w, h);
+
+            const step = Math.floor(dataArray.length / 200);
+            const points = [];
+            for (let i = 0; i < 200; i++) {
+                const idx = i * step;
+                const val = dataArray[idx] || 0;
+                const x = (i / 200) * w;
+                const y = h / 2 + (val / 255 - 0.5) * h * 0.8;
+                points.push({ x, y });
+            }
+
+            // Mehrere Wellen mit verschiedenen Farben
+            const colors = ['#ff6b6b', '#fcc419', '#51cf66', '#74c0fc', '#cc5de8'];
+            for (let wave = 0; wave < 3; wave++) {
+                ctx.beginPath();
+                const offset = wave * 0.3;
+                ctx.strokeStyle = colors[wave % colors.length];
+                ctx.lineWidth = 3 - wave * 0.8;
+                ctx.shadowColor = colors[wave % colors.length] + '80';
+                ctx.shadowBlur = 15;
+                for (let i = 0; i < points.length; i++) {
+                    const p = points[i];
+                    const yOffset = Math.sin(i * 0.05 + Date.now() / 2000 + offset) * 20;
+                    const x = p.x;
+                    const y = p.y + yOffset * (1 - wave * 0.2);
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        function drawCircle(dataArray, ctx, w, h) {
+            // Hintergrund
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(0, 0, w, h);
+
+            const cx = w / 2,
+                cy = h / 2;
+            const radius = Math.min(w, h) * 0.35;
+            const bufferLength = dataArray.length;
+            const angleStep = (Math.PI * 2) / bufferLength;
+
+            for (let i = 0; i < bufferLength; i++) {
+                const value = dataArray[i] / 255;
+                const barHeight = value * radius * 0.6;
+                const angle = i * angleStep + Date.now() / 4000;
+                const x1 = cx + Math.cos(angle) * radius;
+                const y1 = cy + Math.sin(angle) * radius;
+                const x2 = cx + Math.cos(angle) * (radius + barHeight);
+                const y2 = cy + Math.sin(angle) * (radius + barHeight);
+                const hue = (i / bufferLength) * 360 + Date.now() / 100;
+                ctx.strokeStyle = `hsl(${hue % 360}, 100%, 60%)`;
+                ctx.lineWidth = 2 + value * 4;
+                ctx.shadowColor = `hsla(${hue % 360}, 100%, 60%, 0.4)`;
+                ctx.shadowBlur = 10;
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            }
+
+            // Mittlerer Kreis
+            const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+            const glow = 30 + (avg / 255) * 60;
+            const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, glow);
+            grad.addColorStop(0, `rgba(255,255,255,${0.1 + (avg/255)*0.3})`);
+            grad.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(cx, cy, glow, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawFireworks(dataArray, ctx, w, h) {
+            // Hintergrund (leichtes Nachleuchten)
+            ctx.fillStyle = 'rgba(10, 10, 10, 0.15)';
+            ctx.fillRect(0, 0, w, h);
+
+            const numParticles = 60;
+            const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+            const intensity = avg / 255;
+
+            for (let i = 0; i < numParticles; i++) {
+                const angle = (i / numParticles) * Math.PI * 2 + Date.now() / 3000;
+                const dist = 100 + (intensity) * 200 + Math.sin(Date.now() / 2000 + i) * 50;
+                const x = w / 2 + Math.cos(angle + Date.now() / 5000) * dist;
+                const y = h / 2 + Math.sin(angle * 2 + Date.now() / 4000) * dist * 0.6;
+                const size = 2 + intensity * 6;
+                const hue = (i / numParticles) * 360 + Date.now() / 100;
+                const alpha = 0.6 + intensity * 0.4;
+                ctx.fillStyle = `hsla(${hue % 360}, 100%, 70%, ${alpha})`;
+                ctx.shadowColor = `hsla(${hue % 360}, 100%, 70%, 0.5)`;
+                ctx.shadowBlur = 20;
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+
+            // Zentrale Explosion
+            const grad = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, 30 + intensity * 80);
+            grad.addColorStop(0, `rgba(255,255,255,${0.2 + intensity * 0.3})`);
+            grad.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(w / 2, h / 2, 30 + intensity * 80, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawLissajous(dataArray, ctx, w, h) {
+            ctx.fillStyle = 'rgba(10, 10, 20, 0.1)';
+            ctx.fillRect(0, 0, w, h);
+
+            const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+            const intensity = avg / 255;
+
+            const cx = w / 2,
+                cy = h / 2;
+            const maxR = Math.min(w, h) * 0.4;
+            const t = Date.now() / 2000;
+            const freq1 = 3 + intensity * 2;
+            const freq2 = 2 + intensity * 3;
+
+            ctx.beginPath();
+            const steps = 200;
+            for (let i = 0; i <= steps; i++) {
+                const progress = i / steps;
+                const angle = progress * Math.PI * 2;
+                const x = cx + Math.sin(angle * freq1 + t) * maxR * 0.9;
+                const y = cy + Math.cos(angle * freq2 + t * 0.7) * maxR * 0.7;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            const hue = (t * 30) % 360;
+            ctx.strokeStyle = `hsl(${hue}, 100%, 60%)`;
+            ctx.lineWidth = 2 + intensity * 3;
+            ctx.shadowColor = `hsl(${hue}, 100%, 60%, 0.5)`;
+            ctx.shadowBlur = 20;
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // Zweite Linie
+            ctx.beginPath();
+            for (let i = 0; i <= steps; i++) {
+                const progress = i / steps;
+                const angle = progress * Math.PI * 2;
+                const x = cx + Math.cos(angle * 2 + t * 0.5) * maxR * 0.6;
+                const y = cy + Math.sin(angle * 3 + t * 1.2) * maxR * 0.5;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.strokeStyle = `hsl(${hue + 180}, 100%, 70%)`;
+            ctx.lineWidth = 1 + intensity * 2;
+            ctx.shadowColor = `hsl(${hue + 180}, 100%, 70%, 0.3)`;
+            ctx.shadowBlur = 15;
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+        }
+
+        function drawWirbel(dataArray, ctx, w, h) {
+            // Hintergrund
+            const grad = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 1.5);
+            grad.addColorStop(0, '#0a0a2e');
+            grad.addColorStop(1, '#000000');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, w, h);
+
+            const cx = w / 2,
+                cy = h / 2;
+            const maxR = Math.min(w, h) * 0.45;
+            const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+            const intensity = avg / 255;
+
+            const numArms = 4 + Math.floor(intensity * 4);
+            const time = Date.now() / 3000;
+
+            for (let arm = 0; arm < numArms; arm++) {
+                const angleOffset = (arm / numArms) * Math.PI * 2;
+                ctx.beginPath();
+                for (let r = 0; r < maxR; r += 2) {
+                    const angle = r * 0.02 + time + angleOffset + intensity * 0.5;
+                    const x = cx + Math.cos(angle) * r;
+                    const y = cy + Math.sin(angle) * r;
+                    if (r === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                const hue = (arm / numArms) * 360 + time * 50;
+                ctx.strokeStyle = `hsl(${hue % 360}, 100%, 60%)`;
+                ctx.lineWidth = 2 + intensity * 3;
+                ctx.shadowColor = `hsla(${hue % 360}, 100%, 60%, 0.3)`;
+                ctx.shadowBlur = 15;
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            }
+
+            // Zentrum
+            const glow = 20 + intensity * 60;
+            const grad2 = ctx.createRadialGradient(cx, cy, 0, cx, cy, glow);
+            grad2.addColorStop(0, `rgba(255,255,255,${0.1 + intensity * 0.3})`);
+            grad2.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = grad2;
+            ctx.beginPath();
+            ctx.arc(cx, cy, glow, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // ----- Auswahl der Zeichenfunktion -----
         function drawVisualizer(dataArray) {
             const ctx = canvas.getContext('2d');
             const w = canvas.width;
             const h = canvas.height;
 
-            ctx.clearRect(0, 0, w, h);
-
-            // Hintergrund
-            const gradient = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 1.5);
-            gradient.addColorStop(0, '#1a0a2e');
-            gradient.addColorStop(1, '#0a0a0a');
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, w, h);
-
-            // Balken-Visualizer
-            const bufferLength = dataArray.length;
-            const barWidth = (w / bufferLength) * 2.5;
-
-            for (let i = 0; i < bufferLength; i++) {
-                const value = dataArray[i] / 255;
-                const barHeight = value * h * 0.8;
-
-                // Farbe: Regenbogen
-                const hue = (i / bufferLength) * 360 + Date.now() / 50;
-                ctx.fillStyle = `hsl(${hue % 360}, 100%, 60%)`;
-
-                const x = i * (barWidth + 1);
-                const y = h - barHeight;
-
-                // Runde Ecken
-                ctx.beginPath();
-                const radius = 3;
-                ctx.roundRect(x, y, barWidth, barHeight, radius);
-                ctx.fill();
-
-                // Glanz-Effekt
-                ctx.shadowColor = `hsla(${hue % 360}, 100%, 60%, 0.3)`;
-                ctx.shadowBlur = 10;
-                ctx.fill();
-                ctx.shadowBlur = 0;
-            }
-
-            // Zentrierter Kreis (Pulsierend)
-            const centerX = w / 2;
-            const centerY = h / 2;
-            const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-            const radius = 50 + (avg / 255) * 100;
-
-            const grad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
-            grad.addColorStop(0, `rgba(255, 255, 255, ${0.1 + (avg / 255) * 0.3})`);
-            grad.addColorStop(0.5, `rgba(108, 92, 231, ${0.1 + (avg / 255) * 0.2})`);
-            grad.addColorStop(1, 'rgba(108, 92, 231, 0)');
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Partikel (Sterne)
-            for (let i = 0; i < 50; i++) {
-                const angle = (i / 50) * Math.PI * 2 + Date.now() / 1000;
-                const dist = 100 + (avg / 255) * 150 + Math.sin(Date.now() / 2000 + i) * 50;
-                const x = centerX + Math.cos(angle) * dist;
-                const y = centerY + Math.sin(angle) * dist;
-                const size = 1 + (avg / 255) * 3;
-
-                ctx.fillStyle = `hsla(${i * 7 + Date.now() / 50}, 80%, 70%, ${0.5 + (avg / 255) * 0.5})`;
-                ctx.beginPath();
-                ctx.arc(x, y, size, 0, Math.PI * 2);
-                ctx.fill();
+            switch (mode) {
+                case 'balken':
+                    drawBars(dataArray, ctx, w, h);
+                    break;
+                case 'wellen':
+                    drawWaves(dataArray, ctx, w, h);
+                    break;
+                case 'kreis':
+                    drawCircle(dataArray, ctx, w, h);
+                    break;
+                case 'feuerwerk':
+                    drawFireworks(dataArray, ctx, w, h);
+                    break;
+                case 'lissajous':
+                    drawLissajous(dataArray, ctx, w, h);
+                    break;
+                case 'wirbel':
+                    drawWirbel(dataArray, ctx, w, h);
+                    break;
+                default:
+                    drawBars(dataArray, ctx, w, h);
             }
         }
 
-        // ----- roundRect Polyfill für ältere Browser -----
+        // ----- roundRect Polyfill -----
         if (!CanvasRenderingContext2D.prototype.roundRect) {
             CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
                 if (r > w / 2) r = w / 2;
@@ -397,23 +602,14 @@
                 currentAnalyser = analyser;
                 currentAudioElement = audioElement;
 
-                // Canvas-Größe anpassen
-                const rect = container.getBoundingClientRect();
-                canvas.width = rect.width * (window.devicePixelRatio || 1);
-                canvas.height = rect.height * (window.devicePixelRatio || 1);
-                canvas.style.width = rect.width + 'px';
-                canvas.style.height = rect.height + 'px';
+                resizeCanvas();
 
-                // Audio abspielen
                 audioElement.play().then(() => {
                     isPlaying = true;
                     playBtn.textContent = '⏸️';
                     addLog('✅ Wiedergabe gestartet 🎵', 'success');
-
-                    // Rendering starten
                     if (animationId) cancelAnimationFrame(animationId);
                     renderVisualizer();
-
                 }).catch(err => {
                     addLog(`⚠️ Autoplay blockiert: ${err.message}`, 'warn');
                     isPlaying = false;
@@ -432,15 +628,21 @@
         // ----- Rendering-Schleife -----
         function renderVisualizer() {
             if (!currentAnalyser) return;
-
             const dataArray = new Uint8Array(currentAnalyser.frequencyBinCount);
             currentAnalyser.getByteFrequencyData(dataArray);
-
             drawVisualizer(dataArray);
 
             if (isPlaying || currentAudioElement) {
                 animationId = requestAnimationFrame(renderVisualizer);
             }
+        }
+
+        // ----- Modus wechseln -----
+        function switchMode() {
+            currentModeIndex = (currentModeIndex + 1) % MODES.length;
+            mode = MODES[currentModeIndex];
+            modeLabel.textContent = MODE_NAMES[mode];
+            addLog(`🔄 Modus gewechselt: ${MODE_NAMES[mode]}`, 'info');
         }
 
         // ----- Event-Listener -----
@@ -468,37 +670,30 @@
             }
         });
 
-        // Nächstes Preset – bei einfachem Visualizer ändern wir die Farben
-        let colorOffset = 0;
-        nextPresetBtn.addEventListener('click', function() {
-            colorOffset += 60;
-            addLog('🎨 Farben geändert', 'info');
-        });
+        modeBtn.addEventListener('click', switchMode);
 
         volumeControl.addEventListener('input', function() {
             if (currentAudioElement) currentAudioElement.volume = volumeControl.value;
         });
 
         window.addEventListener('resize', function() {
-            if (currentAnalyser) {
-                const rect = container.getBoundingClientRect();
-                canvas.width = rect.width * (window.devicePixelRatio || 1);
-                canvas.height = rect.height * (window.devicePixelRatio || 1);
-                canvas.style.width = rect.width + 'px';
-                canvas.style.height = rect.height + 'px';
-            }
+            resizeCanvas();
         });
 
         document.addEventListener('keydown', function(e) {
             if (e.target.tagName === 'INPUT') return;
             if (e.code === 'Space') { e.preventDefault();
                 playBtn.click(); }
+            if (e.key === 'm' || e.key === 'M') { switchMode(); }
         });
 
         // ----- Start -----
-        initSimpleVisualizer();
-        addLog('💡 Wähle eine MP3-Datei', 'info');
-        addLog('✅ Der Visualizer funktioniert ohne externe Bibliotheken!', 'success');
+        audioContext = new(window.AudioContext || window.webkitAudioContext)();
+        addLog(`✅ AudioContext erstellt (${audioContext.state})`, 'success');
+        resizeCanvas();
+        addLog('💡 Lade eine MP3-Datei', 'info');
+        addLog('🔄 Drücke "m" oder klicke auf 🔄 für anderen Modus', 'info');
+        modeLabel.textContent = MODE_NAMES[mode];
     </script>
 </body>
 </html>
