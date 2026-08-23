@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Butterchurn Visualizer</title>
+    <style>
+        /* Einfaches, dunkles Vollbild-Layout */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #0a0a0a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            font-family: sans-serif;
+        }
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            max-width: 1200px;
+            max-height: 800px;
+            background: #111;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        /* Kleiner Hinweis für den Nutzer */
+        #info {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 14px;
+            pointer-events: none;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="container">
+        <canvas id="visualizer-canvas"></canvas>
+        <div id="info">🎵 Mikrofon wird verwendet – sprich oder spiele Musik</div>
+    </div>
+
+    <!-- Import Map: Butterchurn von CDN laden -->
+    <script type="importmap">
+        {
+            "imports": {
+                "butterchurn": "https://cdn.jsdelivr.net/npm/butterchurn@2.6.7/+esm",
+                "butterchurn-presets": "https://cdn.jsdelivr.net/npm/butterchurn-presets@2.6.7/+esm"
+            }
+        }
+    </script>
+
+    <script type="module">
+        // Butterchurn und Presets importieren
+        import butterchurn from 'butterchurn';
+        import butterchurnPresets from 'butterchurn-presets';
+
+        // DOM-Elemente
+        const canvas = document.getElementById('visualizer-canvas');
+        const container = document.getElementById('container');
+
+        // AudioContext erstellen (wird beim Klick gestartet, siehe unten)
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        // Visualizer initialisieren – Größe an Container anpassen
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+        const visualizer = butterchurn.createVisualizer(audioContext, canvas, {
+            width: width,
+            height: height,
+            // Pixelverhältnis für scharfe Darstellung (optional)
+            pixelRatio: window.devicePixelRatio || 1,
+        });
+
+        // Auf Benutzerinteraktion warten, um AudioContext zu starten (Autoplay-Richtlinie)
+        document.addEventListener('click', () => {
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+        });
+
+        // Mikrofon-Zugriff anfordern und mit Visualizer verbinden
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                const source = audioContext.createMediaStreamSource(stream);
+                const analyser = audioContext.createAnalyser();
+                analyser.fftSize = 512;
+                source.connect(analyser);
+                visualizer.connectAudio(analyser);
+                // Info ausblenden, sobald Audio läuft
+                document.getElementById('info').style.display = 'none';
+            })
+            .catch(err => {
+                console.warn('Mikrofon nicht verfügbar – verwende Oszillator als Testquelle', err);
+                // Fallback: Oszillator erzeugen, damit man etwas sieht
+                const oscillator = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                gain.gain.value = 0.3;
+                oscillator.connect(gain);
+                gain.connect(audioContext.destination);
+                // Analyser für den Oszillator
+                const analyser = audioContext.createAnalyser();
+                oscillator.connect(analyser);
+                analyser.fftSize = 512;
+                visualizer.connectAudio(analyser);
+                oscillator.start();
+                document.getElementById('info').textContent = '🎵 Test-Ton (kein Mikrofon)';
+            });
+
+        // Ein zufälliges Preset laden
+        const presets = butterchurnPresets.getPresets();
+        const presetKeys = Object.keys(presets);
+        if (presetKeys.length > 0) {
+            const randomKey = presetKeys[Math.floor(Math.random() * presetKeys.length)];
+            visualizer.loadPreset(presets[randomKey], 0.0);
+            console.log('Geladenes Preset:', randomKey);
+        } else {
+            console.warn('Keine Presets gefunden');
+        }
+
+        // Rendering-Schleife
+        function render() {
+            visualizer.render();
+            requestAnimationFrame(render);
+        }
+        render();
+
+        // Bei Fenstergrößenänderung Canvas-Größe anpassen
+        window.addEventListener('resize', () => {
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+            visualizer.setRendererSize(w, h);
+        });
+    </script>
+</body>
+</html>
