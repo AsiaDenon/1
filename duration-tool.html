@@ -1,11 +1,12 @@
-<!DOCTYPE html><html lang=de><head><meta charset=UTF-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Laufzeiten abrufen</title><style>
+<!DOCTYPE html><html lang=de><head><meta charset=UTF-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Video-Daten abrufen</title><style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0f0f0f;color:#f0f0f0;padding:32px 20px;max-width:700px;margin:0 auto}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0f0f0f;color:#f0f0f0;padding:32px 20px;max-width:800px;margin:0 auto}
 h1{font-size:20px;margin-bottom:8px}
 .sub{font-size:13px;color:#888;margin-bottom:24px;line-height:1.5}
 .card{background:#1c1c1e;border:1px solid #2c2c2e;border-radius:12px;padding:20px;margin-bottom:16px}
 label{font-size:13px;color:#aaa;display:block;margin-bottom:6px}
 input[type=text]{font-size:14px;padding:8px 10px;border-radius:8px;border:1px solid #3a3a3c;background:#2c2c2e;color:#f0f0f0;outline:none;width:100%;margin-bottom:12px}
+textarea{width:100%;min-height:140px;background:#2c2c2e;color:#f0f0f0;border:1px solid #3a3a3c;border-radius:8px;padding:10px;font-family:monospace;font-size:12px;resize:vertical;margin-bottom:12px}
 .btn{background:#2c2c2e;border:1px solid #3a3a3c;border-radius:8px;padding:9px 16px;font-size:14px;color:#f0f0f0;cursor:pointer}
 .btn:hover{background:#3a3a3c}
 .btn-primary{background:#fff;color:#000;border-color:#fff;font-weight:500}
@@ -15,45 +16,49 @@ input[type=text]{font-size:14px;padding:8px 10px;border-radius:8px;border:1px so
 table{width:100%;border-collapse:collapse;margin-top:16px;font-size:12px}
 th,td{text-align:left;padding:6px 8px;border-bottom:1px solid #2c2c2e}
 th{color:#888;font-weight:500}
-td.dur{font-family:monospace;white-space:nowrap}
+td.num{font-family:monospace;white-space:nowrap}
 td.title{max-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-textarea{width:100%;min-height:180px;background:#0f0f0f;color:#f0f0f0;border:1px solid #3a3a3c;border-radius:8px;padding:10px;font-family:monospace;font-size:12px;resize:vertical;margin-top:10px}
+.exportarea{width:100%;min-height:220px;background:#0f0f0f;color:#f0f0f0;border:1px solid #3a3a3c;border-radius:8px;padding:10px;font-family:monospace;font-size:11px;resize:vertical;margin-top:10px}
 </style></head>
 <body>
 
-<h1>⏱️ Laufzeiten für die 49 vorgeladenen Videos</h1>
-<p class=sub>Fragt die Laufzeit aller 49 Video-IDs in einem einzigen API-Aufruf ab (1 Kontingent-Einheit). Ergebnis kann exportiert und an Claude zurückgegeben werden.</p>
+<h1>⏱️ Video-Daten abrufen</h1>
+<p class=sub>Video-IDs (eine pro Zeile, oder durch Komma/Leerzeichen getrennt) einfügen. Holt Laufzeit, Aufrufzahlen, Hochladedatum und Titel für alle Videos in <b>einem einzigen API-Aufruf</b> (1 Kontingent-Einheit, egal wie viele Videos).</p>
 
 <div class=card>
 <label>YouTube API-Key</label>
 <input type=text id=apiKeyInput placeholder="YouTube Data API v3 Key…">
-<button class="btn btn-primary" id=fetchBtn>Laufzeiten abrufen</button>
+<label>Video-IDs</label>
+<textarea id=idsInput placeholder="Cyu8uvA-vcc&#10;r9P08bbllno&#10;o5vxELArdA0&#10;..."></textarea>
+<button class="btn btn-primary" id=fetchBtn>Daten abrufen</button>
 <div class=status id=statusEl></div>
 </div>
 
 <div class=card id=resultsCard style="display:none">
 <div class="status err" id=problemSummary style="display:none;margin-top:0;margin-bottom:12px"></div>
 <table>
-<thead><tr><th>Video-ID</th><th>Titel</th><th>Laufzeit</th></tr></thead>
+<thead><tr><th>Video-ID</th><th>Titel</th><th>Kanal</th><th>Laufzeit</th><th>Views</th><th>Hochgeladen</th></tr></thead>
 <tbody id=resultsBody></tbody>
 </table>
 </div>
 
 <div class=card id=exportCard style="display:none">
 <button class=btn id=exportBtn>📋 Exportieren</button>
-<textarea id=exportOutput placeholder="Exportierter Text erscheint hier…" readonly></textarea>
+<textarea class=exportarea id=exportOutput placeholder="Exportierter Text erscheint hier…" readonly></textarea>
 </div>
 
-<script>
-var VIDEO_IDS = ["Cyu8uvA-vcc", "r9P08bbllno", "o5vxELArdA0", "FyKOeToIKVU", "aNSiNYb4c9c", "2DC8__PTVuE", "7J653nwumcw", "wrqx5SAxel0", "9Vti9E-TASg", "5D8nXrISDS8", "qAIy8godTy4", "jnbG9CKGy5s", "PJDZXliTw7Y", "foE1mO2yM04", "csdBVbAp4F4", "gCYcHz2k5x0", "R2KeQqLzr00", "JIIIKa-74xs", "Z50N6gL136M", "5qm8PH4xAss", "HKXT4ksHgqY", "OPQmOutTmyo", "-Zee3515V8Y", "WHHmiWUqIZA", "sTmgaP2gYsk", "SsJEXM6RmHM", "G3OBC7mJ21w", "_PSBMEu3y_k", "e6VPQjEg0u4", "yFpCVmI-Xbs", "uxX0Qvr_eYo", "tusl3tO_f1s", "StceS2nBPMs", "ibaz5SrtQ7Y", "Yn7nM78NoMc", "HXYCq8oORkg", "VRK2Caycmq4", "VWNFj9rm6tc", "3VJS4lXi5rk", "BChzoI1W8jA", "mE_XjZz6fIg", "Bk5_aL3y4ig", "0C4kZlNrhbI", "OpcQsLZ_gqE", "XEHQUNgCBuY", "vJnonxp7YLg", "vP0MRBql91U", "o6QfsvmeqZA", "Bw18CzKsF44"];
-var VIDEO_TITLES = {"Cyu8uvA-vcc": "Music Mix 2026 #100 Party Club Dance 2026 | Best Remixes Of Popular Songs 2025 MEGAMIX (DJ Silviu M)", "r9P08bbllno": "The Best Party Mix 2024 | Remixes & Mashups Of Popular Songs", "o5vxELArdA0": "Remember DANCE PARTY MIX vol.1 💿 (Electro Pop, Dance, House 2000s, 2010s) Mixed by CMOCHONSUNY", "FyKOeToIKVU": "CLUB BOUNCE MIX | THROWBACK 2012 HITS | DJRANEL REMIX", "aNSiNYb4c9c": "it's 2010s and you are you are in club at party with your friends ~throwback playlist", "2DC8__PTVuE": "DJ MIX 2026 - Remixes & Mashups of Popular Songs 2026 | DJ Remix Party Club Music Disco Dance 2025", "7J653nwumcw": "Party music mix ~ Best songs that make you dance", "wrqx5SAxel0": "Major Tom / Coming Home (DJ Monster Cover Edit)", "9Vti9E-TASg": "Tomorrowland 2025 (David Guetta, Martin Garrix, Tiesto, Meduza, Avicii, Axwell, Gigi D'Agostino)", "5D8nXrISDS8": "🎶 Best of Melodic Progressive 2026 | Deep Trance Mix Vol. 43 🔥", "qAIy8godTy4": "Electro Pop 2000 | The Best Electro Music 2021 | Electro Pop Party | Dj Roll Perú 🔥", "jnbG9CKGy5s": "Tomorrowland 2026 🔥 Tiësto, David Guetta, Martin Garrix, Armin van Buuren, Hardwell, Afrojack", "PJDZXliTw7Y": "NO EXCUSES | Ultimate EDM Workout Mix", "foE1mO2yM04": "Mike Posner - I Took A Pill In Ibiza (Seeb Remix) (Explicit)", "csdBVbAp4F4": "Melodic Techno 2026 — Deep, Emotional & Progressive Set | Driving Focus Mix", "gCYcHz2k5x0": "Martin Garrix - Animals (Official Video)", "R2KeQqLzr00": "Kato & Jon - Turn The Lights Off (UNKNX, Zylarion, Adrian Vale) TRANCE VERSION - Elite Trance Music", "JIIIKa-74xs": "EDM MIX 🔊 BASS BOOSTED CLUB BANGER ⚡ DANCE PARTY 🥳🎉 NIGHT DRIVE 🌙 GYM WORKOUT 💪 GAMING MUSIC 🎮🎵", "Z50N6gL136M": "LEGENDARY OLD SCHOOL HIP HOP MIX 🔥🔥🔥 Snoop Dogg, Dr. Dre, 50 Cent, 2Pac, Ice Cube, Eminem & More", "5qm8PH4xAss": "50 Cent - In Da Club (Official Music Video)", "HKXT4ksHgqY": "EDM MIX 🎧🔥 MEGA BASS BOOSTED 💯 | CLUB BANGER 🔊 NIGHT DRIVE 🌃 DANCE PARTY 🥳 GYM WORKOUT 💪", "OPQmOutTmyo": "Best Of EDM 2010 - 2020 Megamix ┃Best EDM Songs Of All Time - DJ Mix 2023", "-Zee3515V8Y": "Tomorrowland 2026 - Best Songs, Remixes & Mashups | Festival Mashup Mix 2026", "WHHmiWUqIZA": "Argy & Omnya - Aria (Extended Mix)", "sTmgaP2gYsk": "Music Mix 2026 🎧 EDM Remixes of Popular Songs 🎧 EDM Gaming Music Mix", "SsJEXM6RmHM": "EDM MIX 🎧🔥 MEGA BASS BOOSTED 💯 | HARD CLUB BANGER 🔊 NIGHT DRIVE 🌃 DANCE PARTY 🥳 GYM WORKOUT 💪", "G3OBC7mJ21w": "Martin Garrix Animals vs Tsunami (Remix)", "_PSBMEu3y_k": "Dj Monster - The Sound Of Silence (Monster Mix)", "e6VPQjEg0u4": "wewantwraiths - DJ Party (Monster) (Official Video)", "yFpCVmI-Xbs": "The Sound of Silence - 2k26 Epic Remix (DJ Monster Cover Edit)", "uxX0Qvr_eYo": "The Sound of Silence – Rising to the Night 2k26 Remix Cover ( DJ Monster Edit )", "tusl3tO_f1s": "Let The Music Play (DJ Monster Edit)", "StceS2nBPMs": "(MONSTER MIX) - DJ BL3ND [HD]", "ibaz5SrtQ7Y": "The Winner Takes It All (Monster Mix)", "Yn7nM78NoMc": "Somebody's Watching Me (Monster Mix)", "HXYCq8oORkg": "Dj Monster - Terminator Theme (The Skynet Electro Mix)", "VRK2Caycmq4": "Vangelis – Conquest of Paradise (Epic Remix – DJ Monster Edit)", "VWNFj9rm6tc": "LUM!X, Gabry Ponte - Monster (Official Music Video)", "3VJS4lXi5rk": "Sadeness (2k26 Remix - Dj Monster Edit)", "BChzoI1W8jA": "Djs From Mars - The Best Of EDM 2010 - 2020 Megamashup", "mE_XjZz6fIg": "2000's music hits ~throwback playlist ~2000s vibes mix", "Bk5_aL3y4ig": "🎉 Pop Party Hits Mix #03 | Middle 2000s & Early 2010s Mix - Dj StarSunglasses", "0C4kZlNrhbI": "Radio 2000s Hits [ 24/7 Live ] Early 2000s Pop Hits | 2000s Playlist ● Best of 2000s Songs", "OpcQsLZ_gqE": "Nostalgia . R&B Classic 90's 2000's MixAkon, Nelly, Beyonce, Chris Brown, Mariah Carey, Rihanna", "XEHQUNgCBuY": "BEST MEGAMIX of 2000's Partie 1 I HITS COMPILATION Throwback Vibes By Jeny Preston", "vJnonxp7YLg": "2000's Best RNB Mix featuring Usher, Ashanti. Mariah Carey and more", "vP0MRBql91U": "back to 2000s ~throwback vibes playlist ~2000's music hits old and new today", "o6QfsvmeqZA": "2000s PARTY MIX 🎶 2000s Music Hits & Club Music Mixes Vol.3🔥DJ NilleMcFly's FREITAXMIX", "Bw18CzKsF44": "Club Hits - 90s v 00s (DJ Discretion Mix)"};
-</script>
 <script>
 (function(){
 var apiKeyInput = document.getElementById('apiKeyInput');
 apiKeyInput.value = localStorage.getItem('youtube_api_key_duration_tool') || '';
 apiKeyInput.addEventListener('change', function(){
   localStorage.setItem('youtube_api_key_duration_tool', apiKeyInput.value.trim());
+});
+
+var idsInput = document.getElementById('idsInput');
+idsInput.value = localStorage.getItem('video_ids_duration_tool') || '';
+idsInput.addEventListener('change', function(){
+  localStorage.setItem('video_ids_duration_tool', idsInput.value);
 });
 
 function parseISO8601Duration(iso){
@@ -68,53 +73,78 @@ function formatSeconds(total){
   if(h>0) return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
   return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
 }
+function formatDate(iso){
+  if(!iso) return '';
+  var d = new Date(iso);
+  if(isNaN(d.getTime())) return '';
+  return String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+String(d.getFullYear()).slice(-2);
+}
 
-var results = []; // {videoId, title, seconds, formatted}
+function extractIds(text){
+  var raw = text.split(/[\s,]+/).map(function(s){return s.trim()}).filter(Boolean);
+  return raw.filter(function(id,idx){return raw.indexOf(id)===idx});
+}
+
+var results = [];
 
 document.getElementById('fetchBtn').addEventListener('click', function(){
   var apiKey = apiKeyInput.value.trim();
   var statusEl = document.getElementById('statusEl');
+  var ids = extractIds(idsInput.value);
   if(!apiKey){
     statusEl.textContent = 'Bitte API-Key eingeben.';
     statusEl.className = 'status err';
     return;
   }
-  statusEl.textContent = 'Lädt…';
+  if(!ids.length){
+    statusEl.textContent = 'Bitte mindestens eine Video-ID einfügen.';
+    statusEl.className = 'status err';
+    return;
+  }
+  statusEl.textContent = 'Lädt… (' + ids.length + ' Video-IDs)';
   statusEl.className = 'status';
 
-  var params = new URLSearchParams({part:'contentDetails', id: VIDEO_IDS.join(','), key: apiKey});
-  fetch('https://www.googleapis.com/youtube/v3/videos?'+params.toString())
-    .then(function(r){ return r.json(); })
-    .then(function(data){
-      if(data.error){
-        statusEl.textContent = 'API-Fehler: ' + data.error.message;
-        statusEl.className = 'status err';
-        return;
-      }
-      if(!data.items || !data.items.length){
-        statusEl.textContent = 'Keine Ergebnisse erhalten.';
-        statusEl.className = 'status err';
-        return;
-      }
-      results = data.items.map(function(item){
-        var seconds = parseISO8601Duration(item.contentDetails.duration);
-        return {
-          videoId: item.id,
-          title: VIDEO_TITLES[item.id] || '(unbekannt)',
-          seconds: seconds,
-          formatted: formatSeconds(seconds)
-        };
+  var chunks = [];
+  for(var i=0; i<ids.length; i+=50) chunks.push(ids.slice(i, i+50));
+
+  var allItems = [];
+  var chunkPromises = chunks.map(function(chunk){
+    var params = new URLSearchParams({part:'snippet,contentDetails,liveStreamingDetails,statistics', id: chunk.join(','), key: apiKey});
+    return fetch('https://www.googleapis.com/youtube/v3/videos?'+params.toString())
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        if(data.error) throw new Error(data.error.message);
+        if(data.items) allItems = allItems.concat(data.items);
       });
-      renderResults();
-      statusEl.textContent = '✓ ' + results.length + ' von ' + VIDEO_IDS.length + ' Laufzeiten erhalten.';
-      statusEl.className = results.length === VIDEO_IDS.length ? 'status ok' : 'status err';
-      document.getElementById('resultsCard').style.display = 'block';
-      document.getElementById('exportCard').style.display = 'block';
-    })
-    .catch(function(err){
-      statusEl.textContent = 'Netzwerkfehler: ' + (err.message || 'unbekannt');
-      statusEl.className = 'status err';
+  });
+
+  Promise.all(chunkPromises).then(function(){
+    results = allItems.map(function(item){
+      var seconds = parseISO8601Duration(item.contentDetails ? item.contentDetails.duration : null);
+      var lsd = item.liveStreamingDetails;
+      var isLive = lsd && lsd.actualStartTime && !lsd.actualEndTime;
+      return {
+        videoId: item.id,
+        title: item.snippet ? item.snippet.title : '(unbekannt)',
+        channelTitle: item.snippet ? item.snippet.channelTitle : '',
+        seconds: isLive ? 0 : seconds,
+        formatted: isLive ? 'LIVE' : formatSeconds(seconds),
+        isLive: !!isLive,
+        viewCount: item.statistics ? parseInt(item.statistics.viewCount||0,10) : 0,
+        publishedAt: item.snippet ? item.snippet.publishedAt : null,
+        publishedFormatted: item.snippet ? formatDate(item.snippet.publishedAt) : ''
+      };
     });
+    renderResults();
+    var missing = ids.length - results.length;
+    statusEl.textContent = '✓ ' + results.length + ' von ' + ids.length + ' Video(s) erhalten.' + (missing>0 ? ' (' + missing + ' nicht gefunden, evtl. gelöscht/privat)' : '');
+    statusEl.className = missing === 0 ? 'status ok' : 'status err';
+    document.getElementById('resultsCard').style.display = 'block';
+    document.getElementById('exportCard').style.display = 'block';
+  }).catch(function(err){
+    statusEl.textContent = 'Fehler: ' + (err.message || 'unbekannt');
+    statusEl.className = 'status err';
+  });
 });
 
 function renderResults(){
@@ -123,17 +153,17 @@ function renderResults(){
   var problemCount = 0;
   results.forEach(function(r){
     var tr = document.createElement('tr');
-    var isProblem = r.seconds === 0;
+    var isProblem = r.seconds === 0 && !r.isLive;
     if(isProblem){
       tr.style.background = 'rgba(229,115,115,.15)';
       problemCount++;
     }
-    tr.innerHTML = '<td>'+r.videoId+'</td><td class=title>'+r.title+'</td><td class=dur>'+(isProblem ? '⚠️ ' : '')+r.formatted+' ('+r.seconds+'s)</td>';
+    tr.innerHTML = '<td>'+r.videoId+'</td><td class=title>'+r.title+'</td><td class=title>'+r.channelTitle+'</td><td class=num>'+(isProblem?'⚠️ ':'')+r.formatted+'</td><td class=num>'+r.viewCount.toLocaleString('de-DE')+'</td><td class=num>'+r.publishedFormatted+'</td>';
     tbody.appendChild(tr);
   });
   var summaryEl = document.getElementById('problemSummary');
   if(problemCount > 0){
-    summaryEl.textContent = '⚠️ ' + problemCount + ' Video(s) mit 00:00 Laufzeit gefunden (rot markiert) – vermutlich Livestreams oder ungewöhnliches Format.';
+    summaryEl.textContent = '⚠️ ' + problemCount + ' Video(s) mit 00:00 Laufzeit (nicht als Live erkannt) – evtl. ungewöhnliches Format.';
     summaryEl.style.display = 'block';
   }else{
     summaryEl.style.display = 'none';
@@ -145,13 +175,10 @@ document.getElementById('exportBtn').addEventListener('click', function(){
     document.getElementById('exportOutput').value = '(keine Ergebnisse vorhanden)';
     return;
   }
-  var lines = results.map(function(r){
-    return r.videoId + ': ' + r.seconds;
+  var lines = results.map(function(r, i){
+    return (i+1)+'. videoId: '+r.videoId+' | title: '+r.title+' | channelTitle: '+r.channelTitle+' | durationSeconds: '+r.seconds+' | isLive: '+r.isLive+' | viewCount: '+r.viewCount+' | publishedAt: '+(r.publishedAt||'');
   });
-  var jsObject = '{\n' + results.map(function(r){
-    return '  "' + r.videoId + '": ' + r.seconds + ' // ' + r.formatted;
-  }).join(',\n') + '\n}';
-  document.getElementById('exportOutput').value = jsObject;
+  document.getElementById('exportOutput').value = lines.join('\n');
 });
 })();
 </script>
