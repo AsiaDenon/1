@@ -36,7 +36,6 @@
             height: 100%;
         }
 
-        /* ----- Steuerungs-Overlay ----- */
         #controls {
             position: absolute;
             bottom: 30px;
@@ -45,25 +44,24 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 15px;
-            padding: 15px 25px;
-            background: rgba(0, 0, 0, 0.6);
+            gap: 12px;
+            padding: 12px 20px;
+            background: rgba(0, 0, 0, 0.65);
             backdrop-filter: blur(8px);
             border-radius: 50px;
             margin: 0 auto;
             width: fit-content;
-            max-width: 90%;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            pointer-events: auto;
+            max-width: 92%;
+            border: 1px solid rgba(255, 255, 255, 0.08);
             flex-wrap: wrap;
         }
         #controls button {
             background: rgba(255, 255, 255, 0.1);
             border: none;
             color: white;
-            font-size: 22px;
-            width: 44px;
-            height: 44px;
+            font-size: 20px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             cursor: pointer;
             transition: background 0.2s;
@@ -80,7 +78,7 @@
         .file-label {
             background: #6c5ce7;
             color: white;
-            padding: 10px 20px;
+            padding: 8px 18px;
             border-radius: 30px;
             font-size: 14px;
             font-weight: bold;
@@ -93,23 +91,24 @@
             background: #5541d9;
         }
         #volumeControl {
-            width: 80px;
+            width: 70px;
             accent-color: #6c5ce7;
             cursor: pointer;
-            background: transparent;
         }
         #songName {
-            color: rgba(255, 255, 255, 0.7);
+            color: rgba(255, 255, 255, 0.8);
             font-size: 14px;
             max-width: 180px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            min-width: 60px;
+            text-align: center;
         }
         @media (max-width: 600px) {
-            #controls { gap: 10px; padding: 12px 18px; }
-            .file-label { font-size: 12px; padding: 8px 14px; }
-            #volumeControl { width: 60px; }
+            #controls { gap: 8px; padding: 10px 14px; }
+            .file-label { font-size: 12px; padding: 6px 12px; }
+            #volumeControl { width: 50px; }
             #songName { max-width: 100px; font-size: 12px; }
         }
     </style>
@@ -119,17 +118,16 @@
     <div id="container">
         <canvas id="visualizer-canvas"></canvas>
 
-        <!-- Steuerleiste unten -->
         <div id="controls">
             <button id="playBtn" title="Play / Pause">⏸️</button>
             <label class="file-label" for="fileInput">📂 MP3 laden</label>
             <input type="file" id="fileInput" accept=".mp3,.wav,.ogg,.m4a,.aac" />
+            <button id="nextPresetBtn" title="Nächstes Preset">🎨</button>
             <input type="range" id="volumeControl" min="0" max="1" step="0.05" value="0.8" />
             <span id="songName">Keine Datei</span>
         </div>
     </div>
 
-    <!-- Import Map: Butterchurn von CDN -->
     <script type="importmap">
         {
             "imports": {
@@ -143,15 +141,16 @@
         import butterchurn from 'butterchurn';
         import butterchurnPresets from 'butterchurn-presets';
 
-        // ----- DOM-Referenzen -----
+        // ----- DOM -----
         const canvas = document.getElementById('visualizer-canvas');
         const container = document.getElementById('container');
         const fileInput = document.getElementById('fileInput');
         const playBtn = document.getElementById('playBtn');
         const volumeControl = document.getElementById('volumeControl');
         const songName = document.getElementById('songName');
+        const nextPresetBtn = document.getElementById('nextPresetBtn');
 
-        // ----- Audio & Visualizer -----
+        // ----- AudioContext & Visualizer -----
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
         const width = container.clientWidth;
@@ -162,27 +161,40 @@
             pixelRatio: window.devicePixelRatio || 1,
         });
 
-        // Aktueller Audio-Knoten
+        // ----- Presets laden -----
+        const presets = butterchurnPresets.getPresets();
+        const presetKeys = Object.keys(presets);
+        let currentPresetIndex = 0;
+
+        function loadRandomPreset() {
+            if (presetKeys.length === 0) return;
+            const idx = Math.floor(Math.random() * presetKeys.length);
+            visualizer.loadPreset(presets[presetKeys[idx]], 0.0);
+            currentPresetIndex = idx;
+            console.log('Preset geladen:', presetKeys[idx]);
+        }
+        loadRandomPreset();
+
+        // ----- Zustand -----
         let currentSourceNode = null;
         let currentAnalyser = null;
         let currentAudioElement = null;
         let isPlaying = false;
 
-        // ----- Preset laden (zufällig) -----
-        const presets = butterchurnPresets.getPresets();
-        const presetKeys = Object.keys(presets);
-        if (presetKeys.length > 0) {
-            const randomKey = presetKeys[Math.floor(Math.random() * presetKeys.length)];
-            visualizer.loadPreset(presets[randomKey], 0.0);
-            console.log('Preset geladen:', randomKey);
-        }
-
         // ----- Datei auswählen -----
         fileInput.addEventListener('change', (event) => {
             const file = event.target.files[0];
-            if (!file) return;
+            if (!file) {
+                songName.textContent = '❌ Keine Datei';
+                return;
+            }
 
-            // Alte Audio-Verbindungen trennen
+            // Sofort Dateinamen anzeigen
+            const displayName = file.name.length > 25 ? file.name.slice(0, 22) + '…' : file.name;
+            songName.textContent = displayName;
+            console.log('Datei ausgewählt:', file.name);
+
+            // Alte Verbindungen trennen
             if (currentSourceNode) {
                 currentSourceNode.disconnect();
                 currentSourceNode = null;
@@ -193,50 +205,60 @@
                 currentAudioElement = null;
             }
 
-            // Neues Audio-Element erzeugen
-            const audioElement = new Audio();
-            const objectUrl = URL.createObjectURL(file);
-            audioElement.src = objectUrl;
-            audioElement.loop = false;
-            audioElement.volume = volumeControl.value;
+            try {
+                // Audio-Element erstellen
+                const audioElement = new Audio();
+                const objectUrl = URL.createObjectURL(file);
+                audioElement.src = objectUrl;
+                audioElement.loop = false;
+                audioElement.volume = volumeControl.value;
 
-            // AudioContext muss durch Benutzeraktion laufen (Upload zählt als Klick)
-            if (audioContext.state === 'suspended') {
-                audioContext.resume();
+                // AudioContext starten (falls nötig)
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume().then(() => {
+                        console.log('AudioContext resumed');
+                    }).catch(err => {
+                        console.warn('Resume fehlgeschlagen:', err);
+                    });
+                }
+
+                // MediaElementSource & Analyser
+                const source = audioContext.createMediaElementSource(audioElement);
+                const analyser = audioContext.createAnalyser();
+                analyser.fftSize = 512;
+
+                source.connect(analyser);
+                analyser.connect(audioContext.destination);
+                visualizer.connectAudio(analyser);
+
+                currentSourceNode = source;
+                currentAnalyser = analyser;
+                currentAudioElement = audioElement;
+
+                // Automatisch abspielen
+                audioElement.play().then(() => {
+                    isPlaying = true;
+                    playBtn.textContent = '⏸️';
+                    console.log('▶️ Wiedergabe gestartet');
+                }).catch(err => {
+                    console.warn('Autoplay blockiert:', err);
+                    isPlaying = false;
+                    playBtn.textContent = '▶️';
+                    songName.textContent = '⚠️ ' + displayName + ' (klicke Play)';
+                });
+
+                // Datei-Input zurücksetzen
+                fileInput.value = '';
+
+            } catch (error) {
+                console.error('Fehler beim Laden der Datei:', error);
+                songName.textContent = '❌ Fehler: ' + error.message;
             }
-
-            // Quelle im AudioContext erstellen
-            const source = audioContext.createMediaElementSource(audioElement);
-            const analyser = audioContext.createAnalyser();
-            analyser.fftSize = 512;
-
-            source.connect(analyser);
-            analyser.connect(audioContext.destination); // damit man es hört
-            visualizer.connectAudio(analyser);
-
-            currentSourceNode = source;
-            currentAnalyser = analyser;
-            currentAudioElement = audioElement;
-
-            // Automatisch abspielen
-            audioElement.play().then(() => {
-                isPlaying = true;
-                playBtn.textContent = '⏸️';
-            }).catch(err => {
-                console.warn('Autoplay blockiert, bitte auf Play klicken', err);
-                isPlaying = false;
-                playBtn.textContent = '▶️';
-            });
-
-            songName.textContent = file.name.length > 25 ? file.name.slice(0, 22) + '…' : file.name;
-            // Datei-Input zurücksetzen, damit dieselbe Datei erneut geladen werden kann
-            fileInput.value = '';
         });
 
         // ----- Play / Pause -----
         playBtn.addEventListener('click', () => {
             if (!currentAudioElement) {
-                // Falls noch kein Song geladen ist, öffne den Datei-Dialog
                 fileInput.click();
                 return;
             }
@@ -254,6 +276,11 @@
                 playBtn.textContent = '⏸️';
                 isPlaying = true;
             }
+        });
+
+        // ----- Nächstes Preset -----
+        nextPresetBtn.addEventListener('click', () => {
+            loadRandomPreset();
         });
 
         // ----- Lautstärke -----
@@ -277,16 +304,16 @@
         }
         render();
 
-        // ----- Tastaturkürzel (Leertaste) -----
+        // ----- Tastatur (Leertaste) -----
         document.addEventListener('keydown', (e) => {
-            if (e.target.tagName === 'INPUT') return; // nicht in Eingabefeldern
+            if (e.target.tagName === 'INPUT') return;
             if (e.code === 'Space') {
                 e.preventDefault();
                 playBtn.click();
             }
         });
 
-        console.log('✅ Bereit – lade eine MP3-Datei hoch!');
+        console.log('✅ Bereit – lade eine MP3-Datei hoch.');
     </script>
 </body>
 </html>
