@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Butterchurn MP3 Visualizer</title>
+    <title>Butterchurn Visualizer</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -172,7 +172,33 @@
         </div>
     </div>
 
-    <script type="module">
+    <!-- EINZIGE LÖSUNG: Bundle von unpkg (enthält alles) -->
+    <script src="https://unpkg.com/butterchurn@2.6.7/dist/butterchurn.min.js">
+    </script>
+    <script>
+        // Butterchurn lädt normal, aber Presets separat von einer funktionierenden Quelle
+        // Wir laden die Presets als JSON von einer anderen URL
+        async function loadPresets() {
+            try {
+                // Presets von einer funktionierenden Quelle laden
+                const response = await fetch('https://raw.githubusercontent.com/jberg/butterchurn-presets/master/presets.json');
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                const presetsData = await response.json();
+                return presetsData;
+            } catch (e) {
+                console.warn('Presets von GitHub fehlgeschlagen:', e);
+                // Fallback: minimale Presets
+                return {
+                    'Default': {
+                        "shader": "shaders/default.milk",
+                        "params": {}
+                    }
+                };
+            }
+        }
+    </script>
+
+    <script>
         // ----- Debug-Logger -----
         const logs = [];
 
@@ -225,8 +251,7 @@
         const songName = document.getElementById('songName');
         const nextPresetBtn = document.getElementById('nextPresetBtn');
 
-        // ----- Dynamischer Import von butterchurn -----
-        let butterchurn, butterchurnPresets;
+        // ----- Globale Variablen -----
         let audioContext = null;
         let visualizer = null;
         let currentSourceNode = null;
@@ -234,47 +259,56 @@
         let currentAudioElement = null;
         let isPlaying = false;
         let presetKeys = [];
+        let presetsData = null;
         let isReady = false;
 
-        async function loadButterchurn() {
-            try {
-                addLog('⏳ Lade butterchurn per ESM...', 'info');
-
-                // Butterchurn importieren (ESM von CDN)
-                butterchurn = await import('https://cdn.jsdelivr.net/npm/butterchurn@2.6.7/+esm');
-                butterchurn = butterchurn.default || butterchurn;
-                addLog('✅ butterchurn geladen', 'success');
-
-                butterchurnPresets = await import('https://cdn.jsdelivr.net/npm/butterchurn-presets@2.6.7/+esm');
-                butterchurnPresets = butterchurnPresets.default || butterchurnPresets;
-                addLog('✅ butterchurn-presets geladen', 'success');
-
-                initVisualizer();
-            } catch (err) {
-                addLog(`❌ Fehler beim Laden: ${err.message}`, 'error');
-                console.error(err);
-                // Zweiter Versuch mit anderer Quelle
-                try {
-                    addLog('⏳ Versuche alternativen CDN...', 'warn');
-                    butterchurn = await import('https://unpkg.com/butterchurn@2.6.7/+esm');
-                    butterchurn = butterchurn.default || butterchurn;
-                    addLog('✅ butterchurn (unpkg) geladen', 'success');
-                    butterchurnPresets = await import('https://unpkg.com/butterchurn-presets@2.6.7/+esm');
-                    butterchurnPresets = butterchurnPresets.default || butterchurnPresets;
-                    addLog('✅ butterchurn-presets (unpkg) geladen', 'success');
-                    initVisualizer();
-                } catch (err2) {
-                    addLog(`❌ Auch alternativer CDN fehlgeschlagen: ${err2.message}`, 'error');
+        // ----- Warten auf butterchurn -----
+        function waitForButterchurn() {
+            return new Promise((resolve) => {
+                if (typeof butterchurn !== 'undefined') {
+                    resolve(butterchurn);
+                    return;
                 }
-            }
+                const check = setInterval(() => {
+                    if (typeof butterchurn !== 'undefined') {
+                        clearInterval(check);
+                        resolve(butterchurn);
+                    }
+                }, 100);
+                // Timeout nach 10 Sekunden
+                setTimeout(() => {
+                    clearInterval(check);
+                    resolve(null);
+                }, 10000);
+            });
         }
 
-        function initVisualizer() {
-            if (!butterchurn || !butterchurnPresets) {
-                addLog('❌ Bibliotheken nicht verfügbar', 'error');
+        // ----- Initialisierung -----
+        async function init() {
+            addLog('⏳ Lade butterchurn...', 'info');
+
+            const bc = await waitForButterchurn();
+            if (!bc) {
+                addLog('❌ butterchurn konnte nicht geladen werden', 'error');
+                addLog('💡 Lade die Seite neu oder prüfe die Internetverbindung', 'warn');
                 return;
             }
 
+            addLog('✅ butterchurn geladen', 'success');
+
+            // Presets laden
+            addLog('⏳ Lade Presets...', 'info');
+            try {
+                presetsData = await loadPresets();
+                presetKeys = Object.keys(presetsData);
+                addLog(`✅ ${presetKeys.length} Presets geladen`, 'success');
+            } catch (e) {
+                addLog(`⚠️ Presets-Fehler: ${e.message}`, 'warn');
+                presetsData = { 'Default': { shader: 'shaders/default.milk', params: {} } };
+                presetKeys = ['Default'];
+            }
+
+            // Visualizer erstellen
             try {
                 audioContext = new(window.AudioContext || window.webkitAudioContext)();
                 addLog(`✅ AudioContext erstellt (${audioContext.state})`, 'success');
@@ -289,15 +323,11 @@
                 });
                 addLog(`✅ Visualizer erstellt (${width}x${height})`, 'success');
 
-                // Presets laden
-                const presets = butterchurnPresets.getPresets();
-                presetKeys = Object.keys(presets);
-                addLog(`✅ ${presetKeys.length} Presets geladen`, 'success');
-
-                // Zufälliges Preset laden
-                const randomKey = presetKeys[Math.floor(Math.random() * presetKeys.length)];
-                visualizer.loadPreset(presets[randomKey], 0.0);
-                addLog(`🎨 Preset: ${randomKey.slice(0, 40)}...`, 'info');
+                // Erstes Preset laden
+                if (presetKeys.length > 0) {
+                    visualizer.loadPreset(presetsData[presetKeys[0]], 0.0);
+                    addLog(`🎨 Preset: ${presetKeys[0].slice(0, 40)}...`, 'info');
+                }
 
                 isReady = true;
                 renderLoop();
@@ -319,9 +349,9 @@
         function loadRandomPreset() {
             if (!visualizer || presetKeys.length === 0) return;
             const idx = Math.floor(Math.random() * presetKeys.length);
-            const presets = butterchurnPresets.getPresets();
-            visualizer.loadPreset(presets[presetKeys[idx]], 0.0);
-            addLog(`🎨 Preset: ${presetKeys[idx].slice(0, 40)}...`, 'info');
+            const key = presetKeys[idx];
+            visualizer.loadPreset(presetsData[key], 0.0);
+            addLog(`🎨 Preset: ${key.slice(0, 40)}...`, 'info');
         }
 
         // ----- Datei auswählen -----
@@ -449,9 +479,7 @@
         });
 
         // ----- Start -----
-        addLog('⏳ Lade butterchurn per ESM...', 'info');
-        loadButterchurn();
-
+        init();
         addLog('💡 Wähle eine MP3-Datei', 'info');
     </script>
 </body>
