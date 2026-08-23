@@ -17,7 +17,6 @@
             height: 100vh;
         }
 
-        /* Steuerung */
         #controls {
             position: fixed;
             bottom: 30px;
@@ -85,7 +84,6 @@
             text-align: center;
         }
 
-        /* Debug */
         #debug {
             position: fixed;
             top: 15px;
@@ -149,7 +147,6 @@
 
     <div id="visualizer-container"></div>
 
-    <!-- Debug -->
     <div id="debug">
         <div class="header">
             <b>🐞 Debug</b>
@@ -158,7 +155,6 @@
         <span id="logOutput">Lade ...</span>
     </div>
 
-    <!-- Steuerung -->
     <div id="controls">
         <button id="playBtn" title="Play/Pause">⏸️</button>
         <label class="file-label" for="fileInput">📂 MP3 laden</label>
@@ -170,33 +166,27 @@
         <span id="songName">Keine Datei</span>
     </div>
 
-    <!-- Butterchurn per Import Map laden -->
-    <script type="importmap">
-        {
-            "imports": {
-                "butterchurn": "https://cdn.jsdelivr.net/npm/butterchurn@2.6.7/+esm",
-                "butterchurn-presets": "https://cdn.jsdelivr.net/npm/butterchurn-presets@2.6.7/+esm"
-            }
-        }
+    <!-- Butterchurn als UMD-Script (zuverlässig) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/butterchurn/2.6.7/butterchurn.min.js">
     </script>
 
-    <script type="module">
-        // ----- DEBUG-LOGGER (global, für alle sichtbar) -----
-        window._logs = [];
+    <script>
+        // ----- DEBUG-LOGGER -----
+        const logs = [];
 
-        window.addLog = function(message, type = 'info') {
+        function addLog(message, type = 'info') {
             const timestamp = new Date().toLocaleTimeString();
-            window._logs.push({ message, type, timestamp });
-            if (window._logs.length > 80) window._logs.shift();
+            logs.push({ message, type, timestamp });
+            if (logs.length > 80) logs.shift();
             renderLog();
             console.log(`[${type}]`, message);
-        };
+        }
 
         function renderLog() {
             const output = document.getElementById('logOutput');
             if (!output) return;
             const icons = { error: '❌', success: '✅', warn: '⚠️', info: 'ℹ️' };
-            const html = window._logs.map(log =>
+            const html = logs.map(log =>
                 `<span class="${log.type}">${icons[log.type] || 'ℹ️'} [${log.timestamp}] ${log.message}</span>`
             ).join('<br />');
             output.innerHTML = html;
@@ -204,22 +194,16 @@
             if (debugEl) debugEl.scrollTop = debugEl.scrollHeight;
         }
 
-        // Copy-Button mit Fallback
+        // Copy-Button
         document.getElementById('copyDebugBtn').addEventListener('click', function() {
-            const text = window._logs.map(l => `[${l.timestamp}] ${l.type.toUpperCase()}: ${l.message}`).join('\n');
-            
-            // Methode 1: Clipboard API (funktioniert auf HTTPS)
+            const text = logs.map(l => `[${l.timestamp}] ${l.type.toUpperCase()}: ${l.message}`).join('\n');
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(text).then(() => {
                     const orig = this.textContent;
                     this.textContent = '✅';
                     setTimeout(() => { this.textContent = orig; }, 1500);
-                }).catch(() => {
-                    // Fallback: Methode 2
-                    fallbackCopy(text, this);
-                });
+                }).catch(() => fallbackCopy(text, this));
             } else {
-                // Methode 2: Fallback (funktioniert überall)
                 fallbackCopy(text, this);
             }
         });
@@ -237,25 +221,82 @@
                 button.textContent = '✅';
                 setTimeout(() => { button.textContent = orig; }, 1500);
             } catch (e) {
-                alert('Log kopieren fehlgeschlagen. Bitte manuell kopieren:\n\n' + text);
+                alert('Log kopieren fehlgeschlagen:\n\n' + text);
             }
             document.body.removeChild(ta);
         }
 
-        // Erste Log-Meldung (bevor Imports kommen)
         addLog('🚀 Seite geladen', 'info');
-        addLog('⏳ Lade Butterchurn...', 'info');
 
-        // ----- Imports -----
-        try {
-            const butterchurnModule = await import('butterchurn');
-            const butterchurnPresetsModule = await import('butterchurn-presets');
-            
-            const butterchurn = butterchurnModule.default || butterchurnModule;
-            const butterchurnPresets = butterchurnPresetsModule.default || butterchurnPresetsModule;
+        // ----- WARTEN AUF BUTTERCHURN -----
+        function waitForButterchurn() {
+            return new Promise((resolve) => {
+                if (typeof window.butterchurn !== 'undefined') {
+                    resolve(window.butterchurn);
+                    return;
+                }
+                const check = setInterval(() => {
+                    if (typeof window.butterchurn !== 'undefined') {
+                        clearInterval(check);
+                        resolve(window.butterchurn);
+                    }
+                }, 100);
+                setTimeout(() => {
+                    clearInterval(check);
+                    resolve(null);
+                }, 10000);
+            });
+        }
+
+        // ----- PRESETS LADEN (von GitHub) -----
+        async function loadPresetsFromGitHub() {
+            try {
+                addLog('⏳ Lade Presets von GitHub...', 'info');
+                const response = await fetch(
+                    'https://raw.githubusercontent.com/jberg/butterchurn-presets/master/presets.json'
+                );
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                addLog(`✅ ${Object.keys(data).length} Presets geladen`, 'success');
+                return data;
+            } catch (e) {
+                addLog(`⚠️ GitHub-Fehler: ${e.message}`, 'warn');
+                // Fallback: eingebaute Presets
+                return {
+                    'Default': { "shader": "shaders/default.milk", "params": {} },
+                    'Colorful': { "shader": "shaders/default.milk", "params": { "wave_mode": 1 } },
+                    'Retro': { "shader": "shaders/default.milk", "params": { "wave_mode": 2 } }
+                };
+            }
+        }
+
+        // ----- INIT -----
+        async function init() {
+            addLog('⏳ Lade Butterchurn...', 'info');
+
+            const bc = await waitForButterchurn();
+            if (!bc) {
+                addLog('❌ Butterchurn konnte nicht geladen werden', 'error');
+                addLog('💡 Bitte Seite neu laden oder CDN prüfen', 'warn');
+                return;
+            }
 
             addLog('✅ Butterchurn geladen', 'success');
-            addLog('✅ Presets geladen', 'success');
+
+            // Presets laden
+            const presetsData = await loadPresetsFromGitHub();
+            const presetKeys = Object.keys(presetsData);
+            if (presetKeys.length === 0) {
+                addLog('❌ Keine Presets verfügbar', 'error');
+                return;
+            }
+
+            // Nur die ersten 2 Presets nehmen
+            const myPresets = [
+                presetsData[presetKeys[0]],
+                presetsData[presetKeys[Math.min(1, presetKeys.length - 1)]]
+            ];
+            addLog(`🎨 2 Presets ausgewählt`, 'success');
 
             // ----- DOM -----
             const container = document.getElementById('visualizer-container');
@@ -269,7 +310,7 @@
             // ----- Visualizer -----
             let visualizer;
             try {
-                visualizer = butterchurn.createVisualizer(audioContext, canvas, {
+                visualizer = bc.createVisualizer(audioContext, canvas, {
                     width: window.innerWidth,
                     height: window.innerHeight,
                     pixelRatio: window.devicePixelRatio || 1,
@@ -277,27 +318,7 @@
                 addLog(`✅ Visualizer erstellt (${window.innerWidth}x${window.innerHeight})`, 'success');
             } catch (e) {
                 addLog(`❌ Visualizer Fehler: ${e.message}`, 'error');
-                throw e;
-            }
-
-            // ----- Presets (nur die ersten zwei) -----
-            let presetKeys = [];
-            let myPresets = [];
-            try {
-                const allPresets = butterchurnPresets.getPresets();
-                presetKeys = Object.keys(allPresets);
-                addLog(`📋 ${presetKeys.length} Presets verfügbar`, 'info');
-
-                const indices = [0, Math.min(2, presetKeys.length - 1)];
-                myPresets = indices.map(i => allPresets[presetKeys[i]]);
-                addLog(`🎨 2 Presets ausgewählt`, 'success');
-            } catch (e) {
-                addLog(`❌ Presets Fehler: ${e.message}`, 'error');
-                myPresets = [
-                    { name: 'Default', shader: 'shaders/default.milk', params: {} },
-                    { name: 'Colorful', shader: 'shaders/default.milk', params: { wave_mode: 1 } }
-                ];
-                addLog('⚠️ Fallback-Presets verwendet', 'warn');
+                return;
             }
 
             // ----- Preset-Logik -----
@@ -305,34 +326,27 @@
             const presetLabel = document.getElementById('presetLabel');
 
             function loadPreset(index) {
-                if (!visualizer || myPresets.length === 0) {
-                    addLog('⚠️ Visualizer oder Presets nicht verfügbar', 'warn');
-                    return;
-                }
+                if (!visualizer || myPresets.length === 0) return;
                 const preset = myPresets[index];
                 if (!preset) return;
                 try {
                     visualizer.loadPreset(preset, 4.0);
-                    const name = preset.name || `Preset ${index+1}`;
+                    const name = presetKeys[index] || `Preset ${index+1}`;
                     presetLabel.textContent = `${name} (${index+1}/${myPresets.length})`;
-                    addLog(`🎨 Preset geladen: ${name}`, 'success');
+                    addLog(`🎨 Preset: ${name}`, 'success');
                 } catch (e) {
-                    addLog(`❌ Fehler beim Laden von Preset ${index}: ${e.message}`, 'error');
+                    addLog(`❌ Preset-Fehler: ${e.message}`, 'error');
                 }
             }
 
-            if (myPresets.length > 0) {
-                loadPreset(0);
-            } else {
-                addLog('⚠️ Keine Presets verfügbar', 'warn');
-            }
+            loadPreset(0);
 
             // ----- Audio-Logik -----
             let audioElement = null;
             let isPlaying = false;
 
             function loadAudioFile(file) {
-                addLog(`📂 Lade Datei: ${file.name} (${(file.size/1024).toFixed(0)} KB)`, 'info');
+                addLog(`📂 ${file.name} (${(file.size/1024).toFixed(0)} KB)`, 'info');
                 if (audioElement) {
                     audioElement.pause();
                     audioElement.src = '';
@@ -346,48 +360,39 @@
                     source.connect(analyser);
                     analyser.connect(audioContext.destination);
                     visualizer.connectAudio(analyser);
-                    addLog('🔗 Audio mit Visualizer verbunden', 'success');
+                    addLog('🔗 Audio verbunden', 'success');
 
                     audioElement.play().then(() => {
                         isPlaying = true;
                         document.getElementById('playBtn').textContent = '⏸️';
                         document.getElementById('songName').textContent = file.name.length > 20 ? file.name.slice(0, 17) + '…' : file.name;
-                        addLog('▶️ Wiedergabe gestartet', 'success');
+                        addLog('▶️ Wiedergabe', 'success');
                     }).catch(err => {
                         isPlaying = false;
                         document.getElementById('playBtn').textContent = '▶️';
                         addLog(`⚠️ Autoplay blockiert: ${err.message}`, 'warn');
                     });
                 } catch (e) {
-                    addLog(`❌ Fehler beim Laden der Audiodatei: ${e.message}`, 'error');
+                    addLog(`❌ Audio-Fehler: ${e.message}`, 'error');
                 }
             }
 
-            // ----- Rendering-Schleife -----
+            // ----- Rendering -----
             function render() {
                 if (visualizer) {
-                    try {
-                        visualizer.render();
-                    } catch (e) {
-                        if (!render._errorLogged) {
-                            addLog(`❌ Render-Fehler: ${e.message}`, 'error');
-                            render._errorLogged = true;
-                        }
-                    }
+                    try { visualizer.render(); } catch (e) {}
                 }
                 requestAnimationFrame(render);
             }
             render();
-            addLog('🔄 Rendering gestartet', 'info');
+            addLog('🔄 Rendering', 'info');
 
             // ----- Event-Listener -----
             document.getElementById('fileInput').addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if (file) {
                     if (audioContext.state === 'suspended') {
-                        audioContext.resume().then(() => {
-                            addLog('✅ AudioContext resumed', 'success');
-                        });
+                        audioContext.resume().then(() => addLog('✅ AudioContext resumed', 'success'));
                     }
                     loadAudioFile(file);
                 }
@@ -395,13 +400,8 @@
             });
 
             document.getElementById('playBtn').addEventListener('click', () => {
-                if (!audioElement) {
-                    document.getElementById('fileInput').click();
-                    return;
-                }
-                if (audioContext.state === 'suspended') {
-                    audioContext.resume();
-                }
+                if (!audioElement) { document.getElementById('fileInput').click(); return; }
+                if (audioContext.state === 'suspended') audioContext.resume();
                 if (isPlaying) {
                     audioElement.pause();
                     document.getElementById('playBtn').textContent = '▶️';
@@ -412,9 +412,7 @@
                         document.getElementById('playBtn').textContent = '⏸️';
                         isPlaying = true;
                         addLog('▶️ Play', 'success');
-                    }).catch(err => {
-                        addLog(`❌ Play fehlgeschlagen: ${err.message}`, 'error');
-                    });
+                    }).catch(err => addLog(`❌ Play: ${err.message}`, 'error'));
                 }
             });
 
@@ -431,9 +429,7 @@
             });
 
             document.getElementById('volumeControl').addEventListener('input', (e) => {
-                if (audioElement) {
-                    audioElement.volume = parseFloat(e.target.value);
-                }
+                if (audioElement) audioElement.volume = parseFloat(e.target.value);
             });
 
             window.addEventListener('resize', () => {
@@ -444,26 +440,18 @@
 
             document.addEventListener('keydown', (e) => {
                 if (e.target.tagName === 'INPUT') return;
-                if (e.code === 'Space') {
-                    e.preventDefault();
-                    document.getElementById('playBtn').click();
-                }
-                if (e.key === 'ArrowRight') {
-                    document.getElementById('nextPresetBtn').click();
-                }
-                if (e.key === 'ArrowLeft') {
-                    document.getElementById('prevPresetBtn').click();
-                }
+                if (e.code === 'Space') { e.preventDefault();
+                    document.getElementById('playBtn').click(); }
+                if (e.key === 'ArrowRight') { document.getElementById('nextPresetBtn').click(); }
+                if (e.key === 'ArrowLeft') { document.getElementById('prevPresetBtn').click(); }
             });
 
-            addLog('✅ Alles bereit! Lade eine MP3-Datei.', 'success');
+            addLog('✅ Bereit! Lade eine MP3.', 'success');
             addLog('🎮 Leertaste = Play/Pause, Pfeiltasten = Presets', 'info');
-
-        } catch (error) {
-            addLog(`❌ FATALER FEHLER: ${error.message}`, 'error');
-            console.error(error);
-            document.getElementById('logOutput').innerHTML += `<br><span class="error">❌ Fehler: ${error.message}</span>`;
         }
+
+        // ----- START -----
+        init();
     </script>
 </body>
 </html>
