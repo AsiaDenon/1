@@ -172,7 +172,11 @@
         </div>
     </div>
 
-    <script type="module">
+    <!-- Butterchurn als UMD-Script (funktioniert zuverlässig) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/butterchurn/2.6.7/butterchurn.min.js">
+    </script>
+
+    <script>
         // ----- Debug-Logger -----
         const logs = [];
 
@@ -236,31 +240,27 @@
         let presetsData = null;
         let isReady = false;
 
-        // ----- Butterchurn per ESM laden (funktioniert!) -----
-        async function loadButterchurn() {
-            try {
-                addLog('⏳ Lade butterchurn per ESM...', 'info');
-                const module = await import('https://cdn.jsdelivr.net/npm/butterchurn@2.6.7/+esm');
-                const bc = module.default || module;
-                addLog('✅ butterchurn geladen', 'success');
-                return bc;
-            } catch (err) {
-                addLog(`❌ butterchurn ESM fehlgeschlagen: ${err.message}`, 'error');
-                // Fallback: versuche unpkg
-                try {
-                    addLog('⏳ Versuche alternativen CDN (unpkg)...', 'warn');
-                    const module2 = await import('https://unpkg.com/butterchurn@2.6.7/+esm');
-                    const bc2 = module2.default || module2;
-                    addLog('✅ butterchurn (unpkg) geladen', 'success');
-                    return bc2;
-                } catch (err2) {
-                    addLog(`❌ Auch unpkg fehlgeschlagen: ${err2.message}`, 'error');
-                    return null;
+        // ----- Warten auf Butterchurn (UMD) -----
+        function waitForButterchurn() {
+            return new Promise((resolve) => {
+                if (typeof window.butterchurn !== 'undefined') {
+                    resolve(window.butterchurn);
+                    return;
                 }
-            }
+                const check = setInterval(() => {
+                    if (typeof window.butterchurn !== 'undefined') {
+                        clearInterval(check);
+                        resolve(window.butterchurn);
+                    }
+                }, 100);
+                setTimeout(() => {
+                    clearInterval(check);
+                    resolve(null);
+                }, 10000);
+            });
         }
 
-        // ----- Presets von GitHub laden (als JSON) -----
+        // ----- Presets von GitHub laden -----
         async function loadPresets() {
             try {
                 addLog('⏳ Lade Presets von GitHub...', 'info');
@@ -271,11 +271,19 @@
                 return data;
             } catch (e) {
                 addLog(`⚠️ Presets von GitHub fehlgeschlagen: ${e.message}`, 'warn');
-                // Fallback: minimales Preset
+                // Fallback: eingebaute minimale Presets
                 return {
                     'Default': {
                         "shader": "shaders/default.milk",
                         "params": {}
+                    },
+                    'Colorful': {
+                        "shader": "shaders/default.milk",
+                        "params": { "wave_mode": 1, "zoom": 1.5 }
+                    },
+                    'Retro': {
+                        "shader": "shaders/default.milk",
+                        "params": { "wave_mode": 2, "zoom": 0.8 }
                     }
                 };
             }
@@ -283,11 +291,16 @@
 
         // ----- Initialisierung -----
         async function init() {
-            const bc = await loadButterchurn();
+            addLog('⏳ Lade butterchurn (UMD)...', 'info');
+
+            const bc = await waitForButterchurn();
             if (!bc) {
-                addLog('❌ Butterchurn konnte nicht geladen werden – bitte Seite neu laden', 'error');
+                addLog('❌ Butterchurn konnte nicht geladen werden', 'error');
+                addLog('💡 Lade die Seite neu oder prüfe die Internetverbindung', 'warn');
                 return;
             }
+
+            addLog('✅ butterchurn geladen (UMD)', 'success');
 
             const presets = await loadPresets();
             presetsData = presets;
@@ -300,6 +313,7 @@
                 const width = container.clientWidth;
                 const height = container.clientHeight;
 
+                // WICHTIG: bc.createVisualizer, nicht bc.default.createVisualizer
                 visualizer = bc.createVisualizer(audioContext, canvas, {
                     width: width,
                     height: height,
