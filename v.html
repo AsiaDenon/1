@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Visualizer – 6 Modi</title>
+    <title>Visualizer – 11 coole Modi</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -40,8 +40,8 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 10px;
-            padding: 12px 18px;
+            gap: 8px;
+            padding: 10px 16px;
             background: rgba(0,0,0,0.7);
             backdrop-filter: blur(8px);
             border-radius: 50px;
@@ -53,63 +53,66 @@
             background: rgba(255,255,255,0.1);
             border: none;
             color: white;
-            font-size: 18px;
-            width: 38px;
-            height: 38px;
+            font-size: 16px;
+            width: 34px;
+            height: 34px;
             border-radius: 50%;
             cursor: pointer;
             transition: background 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         #controls button:hover { background: rgba(255,255,255,0.25); }
         #controls input[type="file"] { display: none; }
         .file-label {
             background: #6c5ce7;
             color: white;
-            padding: 7px 16px;
+            padding: 6px 14px;
             border-radius: 30px;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: bold;
             cursor: pointer;
             transition: background 0.2s;
             white-space: nowrap;
         }
         .file-label:hover { background: #5541d9; }
-        #volumeControl { width: 60px; accent-color: #6c5ce7; }
+        #volumeControl { width: 50px; accent-color: #6c5ce7; }
         #songName {
             color: rgba(255,255,255,0.8);
-            font-size: 13px;
-            max-width: 150px;
+            font-size: 12px;
+            max-width: 120px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-            min-width: 50px;
+            min-width: 40px;
             text-align: center;
         }
         #modeLabel {
-            color: rgba(255,255,255,0.6);
-            font-size: 12px;
-            padding: 0 6px;
-            min-width: 60px;
+            color: rgba(255,255,255,0.7);
+            font-size: 11px;
+            padding: 0 4px;
+            min-width: 50px;
             text-align: center;
         }
 
         #debug {
             position: absolute;
-            top: 15px;
-            right: 15px;
+            top: 12px;
+            right: 12px;
             background: rgba(0,0,0,0.85);
             backdrop-filter: blur(6px);
             color: #0f0;
             font-family: 'Courier New', monospace;
-            font-size: 12px;
-            padding: 12px 16px;
+            font-size: 11px;
+            padding: 10px 14px;
             border-radius: 10px;
             border: 1px solid rgba(0,255,0,0.2);
-            max-width: 360px;
-            max-height: 70%;
+            max-width: 320px;
+            max-height: 60%;
             overflow-y: auto;
             z-index: 20;
-            line-height: 1.6;
+            line-height: 1.5;
             box-shadow: 0 4px 20px rgba(0,0,0,0.6);
         }
         #debug .error { color: #ff6b6b; }
@@ -122,14 +125,14 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }
         #debug .header button {
             background: rgba(255,255,255,0.1);
             border: none;
             color: #aaa;
-            font-size: 12px;
-            padding: 2px 10px;
+            font-size: 11px;
+            padding: 2px 8px;
             border-radius: 4px;
             cursor: pointer;
             pointer-events: auto;
@@ -143,17 +146,19 @@
 
         @media (max-width: 700px) {
             #debug {
-                top: 10px;
-                right: 10px;
-                font-size: 10px;
-                padding: 8px 12px;
-                max-width: 200px;
-                max-height: 50%;
+                top: 8px;
+                right: 8px;
+                font-size: 9px;
+                padding: 6px 10px;
+                max-width: 160px;
+                max-height: 40%;
             }
-            #controls { padding: 8px 12px; gap: 6px; }
-            .file-label { font-size: 11px; padding: 5px 12px; }
-            #songName { max-width: 80px; font-size: 11px; }
-            #modeLabel { font-size: 10px; min-width: 40px; }
+            #controls { padding: 6px 10px; gap: 4px; }
+            .file-label { font-size: 10px; padding: 4px 10px; }
+            #songName { max-width: 60px; font-size: 10px; }
+            #modeLabel { font-size: 9px; min-width: 30px; }
+            #controls button { width: 28px; height: 28px; font-size: 13px; }
+            #volumeControl { width: 40px; }
         }
     </style>
 </head>
@@ -164,20 +169,20 @@
 
         <div id="debug">
             <div class="header">
-                <b>🐞 Debug-Log</b>
-                <button id="copyDebugBtn" title="Log kopieren">📋 Kopieren</button>
+                <b>🐞 Debug</b>
+                <button id="copyDebugBtn">📋 Kopieren</button>
             </div>
             <span id="logOutput">Lade ...</span>
         </div>
 
         <div id="controls">
             <button id="playBtn" title="Play/Pause">⏸️</button>
-            <label class="file-label" for="fileInput">📂 MP3 laden</label>
+            <label class="file-label" for="fileInput">📂 MP3</label>
             <input type="file" id="fileInput" accept=".mp3,.wav,.ogg,.m4a,.aac" />
-            <button id="modeBtn" title="Visualisierungsmodus wechseln">🔄</button>
+            <button id="modeBtn" title="Modus wechseln">🔄</button>
             <span id="modeLabel">Balken</span>
             <input type="range" id="volumeControl" min="0" max="1" step="0.05" value="0.8" />
-            <span id="songName">Keine Datei</span>
+            <span id="songName">Keine</span>
         </div>
     </div>
 
@@ -188,7 +193,7 @@
         function addLog(message, type = 'info') {
             const timestamp = new Date().toLocaleTimeString();
             logs.push({ message, type, timestamp });
-            if (logs.length > 100) logs.shift();
+            if (logs.length > 80) logs.shift();
             renderLog();
             console.log(`[${type}]`, message);
         }
@@ -210,8 +215,8 @@
             try {
                 await navigator.clipboard.writeText(text);
                 const orig = this.textContent;
-                this.textContent = '✅ Kopiert!';
-                setTimeout(() => { this.textContent = orig; }, 2000);
+                this.textContent = '✅';
+                setTimeout(() => { this.textContent = orig; }, 1500);
             } catch {
                 const ta = document.createElement('textarea');
                 ta.value = text;
@@ -243,20 +248,28 @@
         let isPlaying = false;
         let animationId = null;
 
-        // ----- Visualisierungsmodi -----
-        const MODES = ['balken', 'wellen', 'kreis', 'feuerwerk', 'lissajous', 'wirbel'];
+        // ----- Alle 11 Visualisierungsmodi -----
+        const MODES = [
+            'balken', 'wellen', 'kreis', 'feuerwerk', 'lissajous', 'wirbel',
+            'nebel', 'partikel', 'torus', 'blitze', 'regenbogen'
+        ];
         const MODE_NAMES = {
             balken: '📊 Balken',
             wellen: '🌊 Wellen',
             kreis: '⭕ Kreis',
             feuerwerk: '🎆 Feuerwerk',
             lissajous: '💫 Lissajous',
-            wirbel: '🌀 Wirbel'
+            wirbel: '🌀 Wirbel',
+            nebel: '🌌 Nebel',
+            partikel: '✨ Partikel',
+            torus: '🌀 3D-Torus',
+            blitze: '⚡ Blitze',
+            regenbogen: '🌈 Regenbogen'
         };
         let currentModeIndex = 0;
         let mode = MODES[0];
 
-        // ----- Canvas-Größe anpassen -----
+        // ----- Canvas-Größe -----
         function resizeCanvas() {
             const rect = container.getBoundingClientRect();
             canvas.width = rect.width * (window.devicePixelRatio || 1);
@@ -265,18 +278,18 @@
             canvas.style.height = rect.height + 'px';
         }
 
-        // ----- Zeichenfunktionen für jeden Modus -----
+        // ============================================================
+        // 1. BARKEN
+        // ============================================================
         function drawBars(dataArray, ctx, w, h) {
-            const bufferLength = dataArray.length;
-            const barWidth = (w / bufferLength) * 2.5;
-
-            // Hintergrund
-            const grad = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 1.5);
+            const grad = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w/1.5);
             grad.addColorStop(0, '#1a0a2e');
             grad.addColorStop(1, '#0a0a0a');
             ctx.fillStyle = grad;
             ctx.fillRect(0, 0, w, h);
 
+            const bufferLength = dataArray.length;
+            const barWidth = (w / bufferLength) * 2.5;
             for (let i = 0; i < bufferLength; i++) {
                 const value = dataArray[i] / 255;
                 const barHeight = value * h * 0.8;
@@ -293,8 +306,10 @@
             }
         }
 
+        // ============================================================
+        // 2. WELLEN
+        // ============================================================
         function drawWaves(dataArray, ctx, w, h) {
-            // Hintergrund
             const grad = ctx.createLinearGradient(0, 0, 0, h);
             grad.addColorStop(0, '#0a0a2e');
             grad.addColorStop(1, '#0a0a0a');
@@ -306,12 +321,9 @@
             for (let i = 0; i < 200; i++) {
                 const idx = i * step;
                 const val = dataArray[idx] || 0;
-                const x = (i / 200) * w;
-                const y = h / 2 + (val / 255 - 0.5) * h * 0.8;
-                points.push({ x, y });
+                points.push({ x: (i/200)*w, y: h/2 + (val/255-0.5)*h*0.8 });
             }
 
-            // Mehrere Wellen mit verschiedenen Farben
             const colors = ['#ff6b6b', '#fcc419', '#51cf66', '#74c0fc', '#cc5de8'];
             for (let wave = 0; wave < 3; wave++) {
                 ctx.beginPath();
@@ -322,24 +334,23 @@
                 ctx.shadowBlur = 15;
                 for (let i = 0; i < points.length; i++) {
                     const p = points[i];
-                    const yOffset = Math.sin(i * 0.05 + Date.now() / 2000 + offset) * 20;
-                    const x = p.x;
-                    const y = p.y + yOffset * (1 - wave * 0.2);
-                    if (i === 0) ctx.moveTo(x, y);
-                    else ctx.lineTo(x, y);
+                    const yOffset = Math.sin(i * 0.05 + Date.now()/2000 + offset) * 20;
+                    if (i === 0) ctx.moveTo(p.x, p.y + yOffset * (1 - wave*0.2));
+                    else ctx.lineTo(p.x, p.y + yOffset * (1 - wave*0.2));
                 }
                 ctx.stroke();
                 ctx.shadowBlur = 0;
             }
         }
 
+        // ============================================================
+        // 3. KREIS-SPEKTRUM
+        // ============================================================
         function drawCircle(dataArray, ctx, w, h) {
-            // Hintergrund
             ctx.fillStyle = '#0a0a0a';
             ctx.fillRect(0, 0, w, h);
 
-            const cx = w / 2,
-                cy = h / 2;
+            const cx = w/2, cy = h/2;
             const radius = Math.min(w, h) * 0.35;
             const bufferLength = dataArray.length;
             const angleStep = (Math.PI * 2) / bufferLength;
@@ -347,12 +358,12 @@
             for (let i = 0; i < bufferLength; i++) {
                 const value = dataArray[i] / 255;
                 const barHeight = value * radius * 0.6;
-                const angle = i * angleStep + Date.now() / 4000;
+                const angle = i * angleStep + Date.now()/4000;
                 const x1 = cx + Math.cos(angle) * radius;
                 const y1 = cy + Math.sin(angle) * radius;
                 const x2 = cx + Math.cos(angle) * (radius + barHeight);
                 const y2 = cy + Math.sin(angle) * (radius + barHeight);
-                const hue = (i / bufferLength) * 360 + Date.now() / 100;
+                const hue = (i / bufferLength) * 360 + Date.now()/100;
                 ctx.strokeStyle = `hsl(${hue % 360}, 100%, 60%)`;
                 ctx.lineWidth = 2 + value * 4;
                 ctx.shadowColor = `hsla(${hue % 360}, 100%, 60%, 0.4)`;
@@ -363,76 +374,55 @@
                 ctx.stroke();
                 ctx.shadowBlur = 0;
             }
-
-            // Mittlerer Kreis
-            const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-            const glow = 30 + (avg / 255) * 60;
-            const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, glow);
-            grad.addColorStop(0, `rgba(255,255,255,${0.1 + (avg/255)*0.3})`);
-            grad.addColorStop(1, 'rgba(255,255,255,0)');
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.arc(cx, cy, glow, 0, Math.PI * 2);
-            ctx.fill();
         }
 
+        // ============================================================
+        // 4. FEUERWERK
+        // ============================================================
         function drawFireworks(dataArray, ctx, w, h) {
-            // Hintergrund (leichtes Nachleuchten)
             ctx.fillStyle = 'rgba(10, 10, 10, 0.15)';
             ctx.fillRect(0, 0, w, h);
 
             const numParticles = 60;
-            const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+            const avg = dataArray.reduce((a,b) => a+b, 0) / dataArray.length;
             const intensity = avg / 255;
 
             for (let i = 0; i < numParticles; i++) {
-                const angle = (i / numParticles) * Math.PI * 2 + Date.now() / 3000;
-                const dist = 100 + (intensity) * 200 + Math.sin(Date.now() / 2000 + i) * 50;
-                const x = w / 2 + Math.cos(angle + Date.now() / 5000) * dist;
-                const y = h / 2 + Math.sin(angle * 2 + Date.now() / 4000) * dist * 0.6;
+                const angle = (i/numParticles)*Math.PI*2 + Date.now()/3000;
+                const dist = 100 + intensity*200 + Math.sin(Date.now()/2000 + i)*50;
+                const x = w/2 + Math.cos(angle + Date.now()/5000) * dist;
+                const y = h/2 + Math.sin(angle*2 + Date.now()/4000) * dist * 0.6;
                 const size = 2 + intensity * 6;
-                const hue = (i / numParticles) * 360 + Date.now() / 100;
-                const alpha = 0.6 + intensity * 0.4;
-                ctx.fillStyle = `hsla(${hue % 360}, 100%, 70%, ${alpha})`;
+                const hue = (i/numParticles)*360 + Date.now()/100;
+                ctx.fillStyle = `hsla(${hue % 360}, 100%, 70%, ${0.6 + intensity*0.4})`;
                 ctx.shadowColor = `hsla(${hue % 360}, 100%, 70%, 0.5)`;
                 ctx.shadowBlur = 20;
                 ctx.beginPath();
-                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.arc(x, y, size, 0, Math.PI*2);
                 ctx.fill();
                 ctx.shadowBlur = 0;
             }
-
-            // Zentrale Explosion
-            const grad = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, 30 + intensity * 80);
-            grad.addColorStop(0, `rgba(255,255,255,${0.2 + intensity * 0.3})`);
-            grad.addColorStop(1, 'rgba(255,255,255,0)');
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.arc(w / 2, h / 2, 30 + intensity * 80, 0, Math.PI * 2);
-            ctx.fill();
         }
 
+        // ============================================================
+        // 5. LISSAJOUS
+        // ============================================================
         function drawLissajous(dataArray, ctx, w, h) {
             ctx.fillStyle = 'rgba(10, 10, 20, 0.1)';
             ctx.fillRect(0, 0, w, h);
 
-            const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+            const avg = dataArray.reduce((a,b) => a+b, 0) / dataArray.length;
             const intensity = avg / 255;
-
-            const cx = w / 2,
-                cy = h / 2;
+            const cx = w/2, cy = h/2;
             const maxR = Math.min(w, h) * 0.4;
             const t = Date.now() / 2000;
-            const freq1 = 3 + intensity * 2;
-            const freq2 = 2 + intensity * 3;
 
             ctx.beginPath();
-            const steps = 200;
-            for (let i = 0; i <= steps; i++) {
-                const progress = i / steps;
+            for (let i = 0; i <= 200; i++) {
+                const progress = i/200;
                 const angle = progress * Math.PI * 2;
-                const x = cx + Math.sin(angle * freq1 + t) * maxR * 0.9;
-                const y = cy + Math.cos(angle * freq2 + t * 0.7) * maxR * 0.7;
+                const x = cx + Math.sin(angle * (3 + intensity*2) + t) * maxR * 0.9;
+                const y = cy + Math.cos(angle * (2 + intensity*3) + t*0.7) * maxR * 0.7;
                 if (i === 0) ctx.moveTo(x, y);
                 else ctx.lineTo(x, y);
             }
@@ -444,45 +434,27 @@
             ctx.shadowBlur = 20;
             ctx.stroke();
             ctx.shadowBlur = 0;
-
-            // Zweite Linie
-            ctx.beginPath();
-            for (let i = 0; i <= steps; i++) {
-                const progress = i / steps;
-                const angle = progress * Math.PI * 2;
-                const x = cx + Math.cos(angle * 2 + t * 0.5) * maxR * 0.6;
-                const y = cy + Math.sin(angle * 3 + t * 1.2) * maxR * 0.5;
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            }
-            ctx.closePath();
-            ctx.strokeStyle = `hsl(${hue + 180}, 100%, 70%)`;
-            ctx.lineWidth = 1 + intensity * 2;
-            ctx.shadowColor = `hsl(${hue + 180}, 100%, 70%, 0.3)`;
-            ctx.shadowBlur = 15;
-            ctx.stroke();
-            ctx.shadowBlur = 0;
         }
 
+        // ============================================================
+        // 6. WIRBEL
+        // ============================================================
         function drawWirbel(dataArray, ctx, w, h) {
-            // Hintergrund
-            const grad = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 1.5);
+            const grad = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w/1.5);
             grad.addColorStop(0, '#0a0a2e');
             grad.addColorStop(1, '#000000');
             ctx.fillStyle = grad;
             ctx.fillRect(0, 0, w, h);
 
-            const cx = w / 2,
-                cy = h / 2;
+            const cx = w/2, cy = h/2;
             const maxR = Math.min(w, h) * 0.45;
-            const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+            const avg = dataArray.reduce((a,b) => a+b, 0) / dataArray.length;
             const intensity = avg / 255;
-
             const numArms = 4 + Math.floor(intensity * 4);
             const time = Date.now() / 3000;
 
             for (let arm = 0; arm < numArms; arm++) {
-                const angleOffset = (arm / numArms) * Math.PI * 2;
+                const angleOffset = (arm/numArms) * Math.PI * 2;
                 ctx.beginPath();
                 for (let r = 0; r < maxR; r += 2) {
                     const angle = r * 0.02 + time + angleOffset + intensity * 0.5;
@@ -491,7 +463,7 @@
                     if (r === 0) ctx.moveTo(x, y);
                     else ctx.lineTo(x, y);
                 }
-                const hue = (arm / numArms) * 360 + time * 50;
+                const hue = (arm/numArms)*360 + time*50;
                 ctx.strokeStyle = `hsl(${hue % 360}, 100%, 60%)`;
                 ctx.lineWidth = 2 + intensity * 3;
                 ctx.shadowColor = `hsla(${hue % 360}, 100%, 60%, 0.3)`;
@@ -499,53 +471,259 @@
                 ctx.stroke();
                 ctx.shadowBlur = 0;
             }
+        }
 
-            // Zentrum
-            const glow = 20 + intensity * 60;
-            const grad2 = ctx.createRadialGradient(cx, cy, 0, cx, cy, glow);
+        // ============================================================
+        // 7. NEBEL 🌌 (NEU)
+        // ============================================================
+        function drawNebel(dataArray, ctx, w, h) {
+            // Farbiger Nebel, der zur Musik pulsiert
+            const avg = dataArray.reduce((a,b) => a+b, 0) / dataArray.length;
+            const intensity = avg / 255;
+
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(0, 0, w, h);
+
+            const time = Date.now() / 3000;
+            const numLayers = 8;
+
+            for (let layer = 0; layer < numLayers; layer++) {
+                const hue = (layer / numLayers) * 360 + time * 20;
+                const radius = 100 + layer * 60 + intensity * 80 + Math.sin(time + layer) * 40;
+                const cx = w/2 + Math.sin(time * 0.5 + layer * 0.8) * 80;
+                const cy = h/2 + Math.cos(time * 0.7 + layer * 1.1) * 60;
+
+                const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+                grad.addColorStop(0, `hsla(${hue % 360}, 100%, 70%, ${0.3 + intensity * 0.2})`);
+                grad.addColorStop(0.5, `hsla(${hue % 360 + 40}, 80%, 50%, ${0.2 + intensity * 0.15})`);
+                grad.addColorStop(1, `hsla(${hue % 360 + 80}, 60%, 30%, 0)`);
+
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Glow-Zentrum
+            const glow = 30 + intensity * 80;
+            const grad2 = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, glow);
             grad2.addColorStop(0, `rgba(255,255,255,${0.1 + intensity * 0.3})`);
             grad2.addColorStop(1, 'rgba(255,255,255,0)');
             ctx.fillStyle = grad2;
             ctx.beginPath();
-            ctx.arc(cx, cy, glow, 0, Math.PI * 2);
+            ctx.arc(w/2, h/2, glow, 0, Math.PI*2);
             ctx.fill();
         }
 
-        // ----- Auswahl der Zeichenfunktion -----
+        // ============================================================
+        // 8. PARTIKEL ✨ (NEU)
+        // ============================================================
+        function drawParticle(dataArray, ctx, w, h) {
+            const avg = dataArray.reduce((a,b) => a+b, 0) / dataArray.length;
+            const intensity = avg / 255;
+
+            // Hintergrund mit leichtem Nachleuchten
+            ctx.fillStyle = 'rgba(5, 5, 10, 0.15)';
+            ctx.fillRect(0, 0, w, h);
+
+            const numParticles = 200 + intensity * 300;
+            const time = Date.now() / 2000;
+
+            for (let i = 0; i < numParticles; i++) {
+                const seed = i * 137.508;
+                const angle = seed + time * (0.5 + intensity * 0.5);
+                const dist = 50 + (i / numParticles) * Math.min(w, h) * 0.5 + Math.sin(time + i) * 30 * intensity;
+                const x = w/2 + Math.cos(angle + Math.sin(time + i * 0.1)) * dist;
+                const y = h/2 + Math.sin(angle * 1.3 + Math.cos(time * 0.7 + i * 0.05)) * dist * 0.6;
+
+                const size = 1 + intensity * 4 + Math.sin(time * 2 + i) * 1;
+                const hue = (i / numParticles) * 360 + time * 50;
+                const alpha = 0.3 + intensity * 0.7 + Math.sin(time + i) * 0.2;
+
+                ctx.fillStyle = `hsla(${hue % 360}, 100%, 70%, ${Math.min(1, alpha)})`;
+                ctx.shadowColor = `hsla(${hue % 360}, 100%, 70%, 0.2)`;
+                ctx.shadowBlur = 15;
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        // ============================================================
+        // 9. 3D-TORUS 🌀 (NEU)
+        // ============================================================
+        function drawTorus(dataArray, ctx, w, h) {
+            const avg = dataArray.reduce((a,b) => a+b, 0) / dataArray.length;
+            const intensity = avg / 255;
+
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(0, 0, w, h);
+
+            const cx = w/2, cy = h/2;
+            const maxR = Math.min(w, h) * 0.35;
+            const time = Date.now() / 2000;
+
+            const numPoints = 80;
+            const segments = 60;
+
+            for (let i = 0; i < numPoints; i++) {
+                for (let j = 0; j < segments; j++) {
+                    const u = (i / numPoints) * Math.PI * 2;
+                    const v = (j / segments) * Math.PI * 2;
+
+                    const r = maxR * (1 + intensity * 0.3 + Math.sin(v * 2 + time) * 0.15);
+                    const x = cx + Math.cos(u + time * 0.5) * (r + Math.sin(v + time) * 20 * intensity);
+                    const y = cy + Math.sin(u + time * 0.5) * (r + Math.cos(v + time) * 20 * intensity);
+
+                    const size = 2 + intensity * 4;
+                    const hue = (i / numPoints) * 360 + time * 40 + j * 5;
+                    const alpha = 0.5 + intensity * 0.5;
+
+                    ctx.fillStyle = `hsla(${hue % 360}, 100%, 60%, ${alpha})`;
+                    ctx.shadowColor = `hsla(${hue % 360}, 100%, 60%, 0.3)`;
+                    ctx.shadowBlur = 10;
+                    ctx.beginPath();
+                    ctx.arc(x, y, size, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                }
+            }
+        }
+
+        // ============================================================
+        // 10. BLITZE ⚡ (NEU)
+        // ============================================================
+        function drawBlitze(dataArray, ctx, w, h) {
+            const avg = dataArray.reduce((a,b) => a+b, 0) / dataArray.length;
+            const intensity = avg / 255;
+
+            // Hintergrund mit leichtem Glow
+            const grad = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w/1.2);
+            grad.addColorStop(0, `rgba(20, 0, 40, ${0.5 + intensity * 0.3})`);
+            grad.addColorStop(1, '#0a0a0a');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, w, h);
+
+            const numBolts = 3 + Math.floor(intensity * 8);
+            const time = Date.now() / 1000;
+
+            for (let bolt = 0; bolt < numBolts; bolt++) {
+                const startX = (bolt / numBolts) * w * 0.1 + Math.random() * w * 0.8;
+                const startY = 0;
+                const endX = w/2 + Math.sin(bolt * 2 + time) * w * 0.3;
+                const endY = h;
+
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+
+                let x = startX, y = startY;
+                const steps = 30 + Math.floor(intensity * 20);
+
+                for (let i = 0; i <= steps; i++) {
+                    const progress = i / steps;
+                    const targetX = startX + (endX - startX) * progress;
+                    const targetY = startY + (endY - startY) * progress;
+
+                    const offset = (1 - progress) * 30 * intensity * (1 + Math.random() * 0.5);
+                    x = targetX + Math.sin(progress * 20 + time * 2 + bolt * 5) * offset;
+                    y = targetY + Math.cos(progress * 15 + time * 1.5 + bolt * 3) * offset * 0.3;
+
+                    ctx.lineTo(x, y);
+                }
+
+                const hue = (bolt / numBolts) * 360 + time * 50;
+                ctx.strokeStyle = `hsla(${hue % 360}, 100%, 70%, ${0.3 + intensity * 0.5})`;
+                ctx.lineWidth = 1 + intensity * 4;
+                ctx.shadowColor = `hsla(${hue % 360}, 100%, 70%, 0.5)`;
+                ctx.shadowBlur = 30;
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        // ============================================================
+        // 11. REGENBOGEN-RING 🌈 (NEU)
+        // ============================================================
+        function drawRegenbogen(dataArray, ctx, w, h) {
+            const avg = dataArray.reduce((a,b) => a+b, 0) / dataArray.length;
+            const intensity = avg / 255;
+
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(0, 0, w, h);
+
+            const cx = w/2, cy = h/2;
+            const maxR = Math.min(w, h) * 0.4;
+            const time = Date.now() / 3000;
+
+            const numRings = 12 + Math.floor(intensity * 8);
+
+            for (let ring = 0; ring < numRings; ring++) {
+                const progress = ring / numRings;
+                const radius = maxR * (0.2 + progress * 0.8) + Math.sin(time + ring) * 10 * intensity;
+                const lineWidth = 2 + intensity * 5 + Math.sin(time * 2 + ring) * 1;
+                const hue = (ring / numRings) * 360 + time * 40;
+
+                ctx.beginPath();
+                ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+                ctx.strokeStyle = `hsla(${hue % 360}, 100%, 60%, ${0.3 + intensity * 0.5 + Math.sin(time + ring) * 0.2})`;
+                ctx.lineWidth = lineWidth;
+                ctx.shadowColor = `hsla(${hue % 360}, 100%, 60%, 0.3)`;
+                ctx.shadowBlur = 20;
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                // Zusätzliche kleine Ringe (Pulsation)
+                if (ring % 2 === 0) {
+                    const subRadius = radius + Math.sin(time * 2 + ring * 0.5) * 15 * intensity;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, subRadius, 0, Math.PI * 2);
+                    ctx.strokeStyle = `hsla(${hue % 360 + 60}, 100%, 70%, ${0.1 + intensity * 0.2})`;
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+            }
+
+            // Zentrum
+            const glow = 20 + intensity * 60;
+            const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, glow);
+            grad.addColorStop(0, `rgba(255,255,255,${0.1 + intensity * 0.3})`);
+            grad.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(cx, cy, glow, 0, Math.PI*2);
+            ctx.fill();
+        }
+
+        // ============================================================
+        // AUSWAHL
+        // ============================================================
         function drawVisualizer(dataArray) {
             const ctx = canvas.getContext('2d');
             const w = canvas.width;
             const h = canvas.height;
 
             switch (mode) {
-                case 'balken':
-                    drawBars(dataArray, ctx, w, h);
-                    break;
-                case 'wellen':
-                    drawWaves(dataArray, ctx, w, h);
-                    break;
-                case 'kreis':
-                    drawCircle(dataArray, ctx, w, h);
-                    break;
-                case 'feuerwerk':
-                    drawFireworks(dataArray, ctx, w, h);
-                    break;
-                case 'lissajous':
-                    drawLissajous(dataArray, ctx, w, h);
-                    break;
-                case 'wirbel':
-                    drawWirbel(dataArray, ctx, w, h);
-                    break;
-                default:
-                    drawBars(dataArray, ctx, w, h);
+                case 'balken': drawBars(dataArray, ctx, w, h); break;
+                case 'wellen': drawWaves(dataArray, ctx, w, h); break;
+                case 'kreis': drawCircle(dataArray, ctx, w, h); break;
+                case 'feuerwerk': drawFireworks(dataArray, ctx, w, h); break;
+                case 'lissajous': drawLissajous(dataArray, ctx, w, h); break;
+                case 'wirbel': drawWirbel(dataArray, ctx, w, h); break;
+                case 'nebel': drawNebel(dataArray, ctx, w, h); break;
+                case 'partikel': drawParticle(dataArray, ctx, w, h); break;
+                case 'torus': drawTorus(dataArray, ctx, w, h); break;
+                case 'blitze': drawBlitze(dataArray, ctx, w, h); break;
+                case 'regenbogen': drawRegenbogen(dataArray, ctx, w, h); break;
+                default: drawBars(dataArray, ctx, w, h);
             }
         }
 
         // ----- roundRect Polyfill -----
         if (!CanvasRenderingContext2D.prototype.roundRect) {
             CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
-                if (r > w / 2) r = w / 2;
-                if (r > h / 2) r = h / 2;
+                if (r > w/2) r = w/2;
+                if (r > h/2) r = h/2;
                 this.moveTo(x + r, y);
                 this.arcTo(x + w, y, x + w, y + h, r);
                 this.arcTo(x + w, y + h, x, y + h, r);
@@ -558,22 +736,19 @@
         // ----- Datei auswählen -----
         function handleFileSelect(event) {
             const file = event.target.files[0];
-            if (!file) {
-                addLog('⚠️ Keine Datei', 'warn');
-                return;
-            }
+            if (!file) return;
 
             const displayName = file.name.length > 25 ? file.name.slice(0, 22) + '…' : file.name;
             songName.textContent = displayName;
-            addLog(`📂 Datei: ${file.name} (${(file.size/1024).toFixed(0)} KB)`, 'info');
+            addLog(`📂 ${file.name} (${(file.size/1024).toFixed(0)} KB)`, 'info');
 
             if (!audioContext) {
                 audioContext = new(window.AudioContext || window.webkitAudioContext)();
-                addLog(`✅ AudioContext erstellt (${audioContext.state})`, 'success');
+                addLog(`✅ AudioContext`, 'success');
             }
 
             if (audioContext.state === 'suspended') {
-                audioContext.resume().catch(e => addLog(`❌ Resume fehlgeschlagen: ${e.message}`, 'error'));
+                audioContext.resume();
             }
 
             try {
@@ -607,11 +782,11 @@
                 audioElement.play().then(() => {
                     isPlaying = true;
                     playBtn.textContent = '⏸️';
-                    addLog('✅ Wiedergabe gestartet 🎵', 'success');
+                    addLog('✅ Wiedergabe 🎵', 'success');
                     if (animationId) cancelAnimationFrame(animationId);
                     renderVisualizer();
                 }).catch(err => {
-                    addLog(`⚠️ Autoplay blockiert: ${err.message}`, 'warn');
+                    addLog(`⚠️ Autoplay: ${err.message}`, 'warn');
                     isPlaying = false;
                     playBtn.textContent = '▶️';
                 });
@@ -619,22 +794,18 @@
                 fileInput.value = '';
 
             } catch (error) {
-                addLog(`❌ Fehler: ${error.message}`, 'error');
-                console.error(error);
+                addLog(`❌ ${error.message}`, 'error');
                 songName.textContent = '❌ Fehler';
             }
         }
 
-        // ----- Rendering-Schleife -----
+        // ----- Rendering -----
         function renderVisualizer() {
             if (!currentAnalyser) return;
             const dataArray = new Uint8Array(currentAnalyser.frequencyBinCount);
             currentAnalyser.getByteFrequencyData(dataArray);
             drawVisualizer(dataArray);
-
-            if (isPlaying || currentAudioElement) {
-                animationId = requestAnimationFrame(renderVisualizer);
-            }
+            animationId = requestAnimationFrame(renderVisualizer);
         }
 
         // ----- Modus wechseln -----
@@ -642,7 +813,7 @@
             currentModeIndex = (currentModeIndex + 1) % MODES.length;
             mode = MODES[currentModeIndex];
             modeLabel.textContent = MODE_NAMES[mode];
-            addLog(`🔄 Modus gewechselt: ${MODE_NAMES[mode]}`, 'info');
+            addLog(`🔄 ${MODE_NAMES[mode]}`, 'info');
         }
 
         // ----- Event-Listener -----
@@ -662,10 +833,9 @@
                 currentAudioElement.play().then(() => {
                     playBtn.textContent = '⏸️';
                     isPlaying = true;
-                    addLog('▶️ Wiedergabe', 'success');
-                    renderVisualizer();
+                    addLog('▶️ Play', 'success');
                 }).catch(err => {
-                    addLog(`❌ Play fehlgeschlagen: ${err.message}`, 'error');
+                    addLog(`❌ Play: ${err.message}`, 'error');
                 });
             }
         });
@@ -676,9 +846,7 @@
             if (currentAudioElement) currentAudioElement.volume = volumeControl.value;
         });
 
-        window.addEventListener('resize', function() {
-            resizeCanvas();
-        });
+        window.addEventListener('resize', resizeCanvas);
 
         document.addEventListener('keydown', function(e) {
             if (e.target.tagName === 'INPUT') return;
@@ -689,10 +857,10 @@
 
         // ----- Start -----
         audioContext = new(window.AudioContext || window.webkitAudioContext)();
-        addLog(`✅ AudioContext erstellt (${audioContext.state})`, 'success');
+        addLog(`✅ AudioContext`, 'success');
         resizeCanvas();
-        addLog('💡 Lade eine MP3-Datei', 'info');
-        addLog('🔄 Drücke "m" oder klicke auf 🔄 für anderen Modus', 'info');
+        addLog('💡 MP3 laden', 'info');
+        addLog('🔄 Taste "m" = Modus', 'info');
         modeLabel.textContent = MODE_NAMES[mode];
     </script>
 </body>
