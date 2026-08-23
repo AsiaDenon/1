@@ -32,6 +32,7 @@ textarea{width:100%;min-height:180px;background:#0f0f0f;color:#f0f0f0;border:1px
 </div>
 
 <div class=card id=resultsCard style="display:none">
+<div class="status err" id=problemSummary style="display:none;margin-top:0;margin-bottom:12px"></div>
 <table>
 <thead><tr><th>Video-ID</th><th>Titel</th><th>Laufzeit</th></tr></thead>
 <tbody id=resultsBody></tbody>
@@ -56,7 +57,9 @@ apiKeyInput.addEventListener('change', function(){
 });
 
 function parseISO8601Duration(iso){
+  if(!iso) return 0;
   var m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if(!m) return 0;
   var h = parseInt(m[1]||0,10), min = parseInt(m[2]||0,10), s = parseInt(m[3]||0,10);
   return h*3600+min*60+s;
 }
@@ -117,11 +120,24 @@ document.getElementById('fetchBtn').addEventListener('click', function(){
 function renderResults(){
   var tbody = document.getElementById('resultsBody');
   tbody.innerHTML = '';
+  var problemCount = 0;
   results.forEach(function(r){
     var tr = document.createElement('tr');
-    tr.innerHTML = '<td>'+r.videoId+'</td><td class=title>'+r.title+'</td><td class=dur>'+r.formatted+' ('+r.seconds+'s)</td>';
+    var isProblem = r.seconds === 0;
+    if(isProblem){
+      tr.style.background = 'rgba(229,115,115,.15)';
+      problemCount++;
+    }
+    tr.innerHTML = '<td>'+r.videoId+'</td><td class=title>'+r.title+'</td><td class=dur>'+(isProblem ? '⚠️ ' : '')+r.formatted+' ('+r.seconds+'s)</td>';
     tbody.appendChild(tr);
   });
+  var summaryEl = document.getElementById('problemSummary');
+  if(problemCount > 0){
+    summaryEl.textContent = '⚠️ ' + problemCount + ' Video(s) mit 00:00 Laufzeit gefunden (rot markiert) – vermutlich Livestreams oder ungewöhnliches Format.';
+    summaryEl.style.display = 'block';
+  }else{
+    summaryEl.style.display = 'none';
+  }
 }
 
 document.getElementById('exportBtn').addEventListener('click', function(){
