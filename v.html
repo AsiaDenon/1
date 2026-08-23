@@ -236,21 +236,33 @@
         addLog('⏳ Lade Butterchurn...', 'info');
 
         try {
-            // BUTTERCHURN IMPORT – hier liegt der Fehler!
+            // Butterchurn per ESM importieren
             const module = await import('butterchurn');
             
-            // Das Modul hat nur einen Default-Export.
-            // Die eigentliche Bibliothek ist unter .default
-            const butterchurn = module.default;
-
-            // Prüfen, ob createVisualizer existiert
+            // Schritt 1: Default-Export holen
+            let butterchurn = module.default;
+            addLog(`🔍 module.default Typ: ${typeof butterchurn}`, 'info');
+            
+            // Schritt 2: Falls butterchurn wiederum einen default-Export hat, diesen nehmen
+            if (butterchurn && typeof butterchurn === 'object' && butterchurn.default) {
+                addLog(`📦 Doppelte Verschachtelung erkannt – entpacke`, 'info');
+                butterchurn = butterchurn.default;
+            }
+            
+            // Schritt 3: Prüfen, ob createVisualizer existiert
             if (typeof butterchurn.createVisualizer !== 'function') {
-                addLog(`❌ butterchurn.createVisualizer ist keine Funktion`, 'error');
-                addLog(`🔍 Verfügbare Keys: ${Object.keys(butterchurn).join(', ')}`, 'info');
-                throw new Error('butterchurn.createVisualizer is not a function');
+                // Fallback: Versuche, die Funktion aus dem importierten Modul zu bekommen
+                // Manche Builds exportieren die Funktion direkt
+                if (typeof module.createVisualizer === 'function') {
+                    butterchurn = module;
+                } else {
+                    addLog(`❌ butterchurn.createVisualizer ist keine Funktion`, 'error');
+                    addLog(`🔍 Verfügbare Keys: ${Object.keys(butterchurn).join(', ')}`, 'info');
+                    throw new Error('butterchurn.createVisualizer is not a function');
+                }
             }
 
-            addLog('✅ Butterchurn geladen', 'success');
+            addLog('✅ Butterchurn erfolgreich geladen', 'success');
 
             // ----- PRESETS VON GITHUB LADEN -----
             addLog('⏳ Lade Presets von GitHub...', 'info');
@@ -291,7 +303,7 @@
             const audioContext = new (window.AudioContext || window.webkitAudioContext)();
             addLog(`🔊 AudioContext erstellt (${audioContext.state})`, 'success');
 
-            // ----- VISUALIZER (mit butterchurn.default) -----
+            // ----- VISUALIZER -----
             let visualizer;
             try {
                 visualizer = butterchurn.createVisualizer(audioContext, canvas, {
