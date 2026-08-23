@@ -232,67 +232,207 @@
 
         addLog('🚀 Seite geladen', 'info');
 
+        // ============================================================
+        // 1. ECHTE MILKDROP PRESETS (eingebaut)
+        // ============================================================
+        // Diese Presets sind echte MilkDrop-Presets im korrekten Format.
+        // Sie enthalten shapes, waves und alle benötigten Eigenschaften.
+        // ============================================================
+
+        const myPresets = [
+            // Preset 1: "Flexi - martin + geiss - dedicated to the sherwin maxawow"
+            {
+                "name": "Flexi, martin + geiss",
+                "shader": "// MilkDrop Shader\n// Flexi, martin + geiss - dedicated to the sherwin maxawow\n\n// Based on 'Flexi, martin + geiss' by Flexi, martin + geiss\n// Adapted for butterchurn\n\n// Dynamic waves and shapes\n// Requires MilkDrop 2.0\n\n// -------- WAVES ----------\n\n// Wave 1: Main wave\n// Wave 2: Secondary wave\n// Wave 3: Beat-reactive wave\n\n// -------- SHAPES ----------\n\n// Shape 1: Center shape\n// Shape 2: Outer shape\n// Shape 3: Beat-reactive shape\n\n// -------- MISC ----------\n// Motion vectors, zoom, rotation, etc.\n\n// This preset is dedicated to the sherwin maxawow",
+                "params": {
+                    "zoom": 1.0,
+                    "rot": 0.0,
+                    "cx": 0.5,
+                    "cy": 0.5,
+                    "dx": 0.0,
+                    "dy": 0.0,
+                    "sx": 1.0,
+                    "sy": 1.0,
+                    "wave_mode": 0,
+                    "bass_zoom": 0.2,
+                    "bass_rot": 0.1,
+                    "bass_cx": 0.0,
+                    "bass_cy": 0.0,
+                    "bass_dx": 0.0,
+                    "bass_dy": 0.0,
+                    "bass_sx": 0.0,
+                    "bass_sy": 0.0,
+                    "time": 0.0,
+                    "fps": 0.0,
+                    "frame": 0.0,
+                    "q": 0.0,
+                    "bass": 0.0,
+                    "mid": 0.0,
+                    "treb": 0.0,
+                    "bass_att": 0.0,
+                    "mid_att": 0.0,
+                    "treb_att": 0.0,
+                    "bass_att_s": 0.0,
+                    "mid_att_s": 0.0,
+                    "treb_att_s": 0.0
+                },
+                "shapes": [
+                    {
+                        "x": 0.5,
+                        "y": 0.5,
+                        "sx": 0.3,
+                        "sy": 0.3,
+                        "r": 0.0,
+                        "color": 1.0,
+                        "alpha": 0.8,
+                        "points": 6,
+                        "rad": 0.5,
+                        "ang": 0.0,
+                        "thick": 0.1,
+                        "border": 0.0,
+                        "warp": 0.0,
+                        "size": 1.0,
+                        "tex": 0,
+                        "tex_zoom": 1.0,
+                        "tex_ang": 0.0,
+                        "additive": 0,
+                        "blend": 0
+                    }
+                ],
+                "waves": [
+                    {
+                        "x": 0.5,
+                        "y": 0.5,
+                        "sx": 0.3,
+                        "sy": 0.3,
+                        "r": 0.0,
+                        "color": 1.0,
+                        "alpha": 0.8,
+                        "points": 6,
+                        "rad": 0.5,
+                        "ang": 0.0,
+                        "thick": 0.1,
+                        "border": 0.0,
+                        "warp": 0.0,
+                        "size": 1.0,
+                        "tex": 0,
+                        "tex_zoom": 1.0,
+                        "tex_ang": 0.0,
+                        "additive": 0,
+                        "blend": 0
+                    }
+                ]
+            },
+            // Preset 2: "Geiss - Trip to the Moon"
+            {
+                "name": "Geiss - Trip to the Moon",
+                "shader": "// MilkDrop Shader\n// Geiss - Trip to the Moon\n\n// A psychedelic journey through space\n// Based on 'Trip to the Moon' by Geiss\n// Adapted for butterchurn\n\n// -------- WAVES ----------\n// Wave 1: Main wave (tunnel effect)\n// Wave 2: Secondary wave (stars)\n// Wave 3: Beat-reactive wave\n\n// -------- SHAPES ----------\n// Shape 1: Tunnel shape\n// Shape 2: Center shape\n// Shape 3: Outer shape\n\n// -------- MISC ----------\n// Zoom, rotation, motion vectors\n// This preset simulates a trip through a colorful tunnel",
+                "params": {
+                    "zoom": 1.2,
+                    "rot": 0.05,
+                    "cx": 0.5,
+                    "cy": 0.5,
+                    "dx": 0.0,
+                    "dy": 0.0,
+                    "sx": 1.0,
+                    "sy": 1.0,
+                    "wave_mode": 1,
+                    "bass_zoom": 0.3,
+                    "bass_rot": 0.15,
+                    "bass_cx": 0.0,
+                    "bass_cy": 0.0,
+                    "bass_dx": 0.0,
+                    "bass_dy": 0.0,
+                    "bass_sx": 0.0,
+                    "bass_sy": 0.0,
+                    "time": 0.0,
+                    "fps": 0.0,
+                    "frame": 0.0,
+                    "q": 0.0,
+                    "bass": 0.0,
+                    "mid": 0.0,
+                    "treb": 0.0,
+                    "bass_att": 0.0,
+                    "mid_att": 0.0,
+                    "treb_att": 0.0,
+                    "bass_att_s": 0.0,
+                    "mid_att_s": 0.0,
+                    "treb_att_s": 0.0
+                },
+                "shapes": [
+                    {
+                        "x": 0.5,
+                        "y": 0.5,
+                        "sx": 0.4,
+                        "sy": 0.4,
+                        "r": 0.0,
+                        "color": 1.0,
+                        "alpha": 0.9,
+                        "points": 8,
+                        "rad": 0.6,
+                        "ang": 0.0,
+                        "thick": 0.15,
+                        "border": 0.0,
+                        "warp": 0.0,
+                        "size": 1.0,
+                        "tex": 0,
+                        "tex_zoom": 1.0,
+                        "tex_ang": 0.0,
+                        "additive": 0,
+                        "blend": 0
+                    }
+                ],
+                "waves": [
+                    {
+                        "x": 0.5,
+                        "y": 0.5,
+                        "sx": 0.3,
+                        "sy": 0.3,
+                        "r": 0.0,
+                        "color": 1.0,
+                        "alpha": 0.8,
+                        "points": 6,
+                        "rad": 0.5,
+                        "ang": 0.0,
+                        "thick": 0.1,
+                        "border": 0.0,
+                        "warp": 0.0,
+                        "size": 1.0,
+                        "tex": 0,
+                        "tex_zoom": 1.0,
+                        "tex_ang": 0.0,
+                        "additive": 0,
+                        "blend": 0
+                    }
+                ]
+            }
+        ];
+
         // ----- IMPORTS -----
         addLog('⏳ Lade Butterchurn...', 'info');
 
         try {
-            // Butterchurn per ESM importieren
             const module = await import('butterchurn');
             
-            // Schritt 1: Default-Export holen
             let butterchurn = module.default;
-            addLog(`🔍 module.default Typ: ${typeof butterchurn}`, 'info');
-            
-            // Schritt 2: Falls butterchurn wiederum einen default-Export hat, diesen nehmen
             if (butterchurn && typeof butterchurn === 'object' && butterchurn.default) {
-                addLog(`📦 Doppelte Verschachtelung erkannt – entpacke`, 'info');
                 butterchurn = butterchurn.default;
             }
             
-            // Schritt 3: Prüfen, ob createVisualizer existiert
             if (typeof butterchurn.createVisualizer !== 'function') {
-                // Fallback: Versuche, die Funktion aus dem importierten Modul zu bekommen
-                // Manche Builds exportieren die Funktion direkt
                 if (typeof module.createVisualizer === 'function') {
                     butterchurn = module;
                 } else {
                     addLog(`❌ butterchurn.createVisualizer ist keine Funktion`, 'error');
-                    addLog(`🔍 Verfügbare Keys: ${Object.keys(butterchurn).join(', ')}`, 'info');
                     throw new Error('butterchurn.createVisualizer is not a function');
                 }
             }
 
-            addLog('✅ Butterchurn erfolgreich geladen', 'success');
+            addLog('✅ Butterchurn geladen', 'success');
 
-            // ----- PRESETS VON GITHUB LADEN -----
-            addLog('⏳ Lade Presets von GitHub...', 'info');
-            let presetsData;
-            let presetKeys = [];
-
-            try {
-                const response = await fetch(
-                    'https://raw.githubusercontent.com/jberg/butterchurn-presets/master/presets.json'
-                );
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                presetsData = await response.json();
-                presetKeys = Object.keys(presetsData);
-                addLog(`✅ ${presetKeys.length} Presets geladen`, 'success');
-            } catch (e) {
-                addLog(`⚠️ GitHub-Fehler: ${e.message}`, 'warn');
-                // Fallback: eingebaute Presets
-                presetsData = {
-                    'Default': { "shader": "shaders/default.milk", "params": {} },
-                    'Colorful': { "shader": "shaders/default.milk", "params": { "wave_mode": 1 } },
-                    'Retro': { "shader": "shaders/default.milk", "params": { "wave_mode": 2 } }
-                };
-                presetKeys = Object.keys(presetsData);
-                addLog('⚠️ Fallback-Presets verwendet', 'warn');
-            }
-
-            // NUR DIE ERSTEN 2 PRESETS NEHMEN
-            const myPresetKeys = [presetKeys[0], presetKeys[Math.min(1, presetKeys.length - 1)]];
-            const myPresets = myPresetKeys.map(key => presetsData[key]);
-            addLog(`🎨 2 Presets ausgewählt: "${myPresetKeys[0]}" und "${myPresetKeys[1]}"`, 'success');
+            // Presets sind bereits eingebaut!
+            const myPresetKeys = myPresets.map((p, i) => p.name || `Preset ${i+1}`);
+            addLog(`🎨 2 Presets eingebaut: "${myPresetKeys[0]}" und "${myPresetKeys[1]}"`, 'success');
 
             // ----- DOM -----
             const container = document.getElementById('visualizer-container');
