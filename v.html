@@ -1,525 +1,341 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Butterchurn Visualizer</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            background: #0a0a0a;
-            overflow: hidden;
-            font-family: 'Segoe UI', sans-serif;
+<script type="module">
+    // ----- DEBUG-LOGGER (unverändert) -----
+    const logs = [];
+    function addLog(message, type = 'info') {
+        const timestamp = new Date().toLocaleTimeString();
+        logs.push({ message, type, timestamp });
+        if (logs.length > 80) logs.shift();
+        renderLog();
+        console.log(`[${type}]`, message);
+    }
+    function renderLog() {
+        const output = document.getElementById('logOutput');
+        if (!output) return;
+        const icons = { error: '❌', success: '✅', warn: '⚠️', info: 'ℹ️' };
+        const html = logs.map(log =>
+            `<span class="${log.type}">${icons[log.type] || 'ℹ️'} [${log.timestamp}] ${log.message}</span>`
+        ).join('<br />');
+        output.innerHTML = html;
+        const debugEl = document.getElementById('debug');
+        if (debugEl) debugEl.scrollTop = debugEl.scrollHeight;
+    }
+    document.getElementById('copyDebugBtn').addEventListener('click', function() {
+        const text = logs.map(l => `[${l.timestamp}] ${l.type.toUpperCase()}: ${l.message}`).join('\n');
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(() => {
+                const orig = this.textContent;
+                this.textContent = '✅';
+                setTimeout(() => { this.textContent = orig; }, 1500);
+            }).catch(() => fallbackCopy(text, this));
+        } else {
+            fallbackCopy(text, this);
         }
-        canvas {
-            display: block;
-            width: 100vw;
-            height: 100vh;
+    });
+    function fallbackCopy(text, button) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+            document.execCommand('copy');
+            const orig = button.textContent;
+            button.textContent = '✅';
+            setTimeout(() => { button.textContent = orig; }, 1500);
+        } catch (e) {
+            alert('Log kopieren fehlgeschlagen:\n\n' + text);
         }
+        document.body.removeChild(ta);
+    }
 
-        #controls {
-            position: fixed;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 24px;
-            background: rgba(0,0,0,0.7);
-            backdrop-filter: blur(8px);
-            border-radius: 50px;
-            border: 1px solid rgba(255,255,255,0.08);
-            z-index: 100;
-            flex-wrap: wrap;
-        }
-        #controls button {
-            background: rgba(255,255,255,0.1);
-            border: none;
-            color: white;
-            font-size: 20px;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            cursor: pointer;
-            transition: background 0.2s;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        #controls button:hover { background: rgba(255,255,255,0.25); }
-        #controls input[type="file"] { display: none; }
-        .file-label {
-            background: #6c5ce7;
-            color: white;
-            padding: 8px 18px;
-            border-radius: 30px;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background 0.2s;
-            white-space: nowrap;
-        }
-        .file-label:hover { background: #5541d9; }
-        #presetLabel {
-            color: rgba(255,255,255,0.6);
-            font-size: 12px;
-            padding: 0 8px;
-            min-width: 100px;
-            text-align: center;
-        }
-        #volumeControl {
-            width: 60px;
-            accent-color: #6c5ce7;
-        }
-        #songName {
-            color: rgba(255,255,255,0.7);
-            font-size: 12px;
-            max-width: 150px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            min-width: 50px;
-            text-align: center;
-        }
+    addLog('🚀 Seite geladen', 'info');
 
-        #debug {
-            position: fixed;
-            top: 15px;
-            right: 15px;
-            background: rgba(0,0,0,0.85);
-            backdrop-filter: blur(6px);
-            color: #0f0;
-            font-family: 'Courier New', monospace;
-            font-size: 11px;
-            padding: 10px 14px;
-            border-radius: 10px;
-            border: 1px solid rgba(0,255,0,0.2);
-            max-width: 350px;
-            max-height: 60%;
-            overflow-y: auto;
-            z-index: 200;
-            line-height: 1.5;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+    // ============================================================
+    // 1. BUTTERCHURN LADEN (ESM)
+    // ============================================================
+    addLog('⏳ Lade Butterchurn...', 'info');
+    let butterchurn;
+    try {
+        const module = await import('butterchurn');
+        butterchurn = module.default || module;
+        if (butterchurn && typeof butterchurn === 'object' && butterchurn.default) {
+            butterchurn = butterchurn.default;
         }
-        #debug .error { color: #ff6b6b; }
-        #debug .success { color: #51cf66; }
-        #debug .info { color: #74c0fc; }
-        #debug .warn { color: #fcc419; }
-        #debug::-webkit-scrollbar { width: 4px; }
-        #debug::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
-        #debug .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 4px;
+        if (typeof butterchurn.createVisualizer !== 'function') {
+            throw new Error('createVisualizer ist keine Funktion');
         }
-        #debug .header button {
-            background: rgba(255,255,255,0.1);
-            border: none;
-            color: #aaa;
-            font-size: 11px;
-            padding: 2px 8px;
-            border-radius: 4px;
-            cursor: pointer;
-            pointer-events: auto;
-            font-family: inherit;
+        addLog('✅ Butterchurn geladen', 'success');
+    } catch (e) {
+        addLog(`❌ Butterchurn Fehler: ${e.message}`, 'error');
+        throw e;
+    }
+
+    // ============================================================
+    // 2. PRESETS LADEN – jetzt als ES-Modul
+    // ============================================================
+    addLog('⏳ Lade Presets (ESM)...', 'info');
+    let myPresets = [];
+    let myPresetKeys = [];
+
+    try {
+        // Dynamischer Import der Preset-Bibliothek als ES-Modul
+        const presetsModule = await import('https://cdn.jsdelivr.net/npm/butterchurn-presets@2.6.7/+esm');
+        const getPresets = presetsModule.getPresets || presetsModule.default?.getPresets;
+        if (typeof getPresets !== 'function') {
+            throw new Error('getPresets nicht gefunden');
         }
-        #debug .header button:hover {
-            background: rgba(255,255,255,0.2);
-            color: white;
-        }
-        #logOutput { display: block; word-wrap: break-word; }
+        const allPresets = getPresets();
+        const keys = Object.keys(allPresets);
+        if (keys.length === 0) throw new Error('Keine Presets im Objekt');
 
-        @media (max-width: 700px) {
-            #controls { padding: 8px 14px; gap: 6px; }
-            .file-label { font-size: 11px; padding: 5px 12px; }
-            #presetLabel { font-size: 10px; min-width: 60px; }
-            #controls button { width: 32px; height: 32px; font-size: 16px; }
-            #volumeControl { width: 40px; }
-            #songName { max-width: 80px; font-size: 10px; }
-            #debug { max-width: 200px; font-size: 9px; padding: 6px 10px; top: 10px; right: 10px; }
-        }
-    </style>
-</head>
-<body>
-
-    <div id="visualizer-container"></div>
-
-    <div id="debug">
-        <div class="header">
-            <b>🐞 Debug</b>
-            <button id="copyDebugBtn">📋 Kopieren</button>
-        </div>
-        <span id="logOutput">Lade ...</span>
-    </div>
-
-    <div id="controls">
-        <button id="playBtn" title="Play/Pause">⏸️</button>
-        <label class="file-label" for="fileInput">📂 MP3 laden</label>
-        <input type="file" id="fileInput" accept=".mp3,.wav,.ogg,.m4a,.aac" />
-        <button id="prevPresetBtn" title="Vorheriges Preset">◀️</button>
-        <span id="presetLabel">Preset 1/2</span>
-        <button id="nextPresetBtn" title="Nächstes Preset">▶️</button>
-        <input type="range" id="volumeControl" min="0" max="1" step="0.05" value="0.8" />
-        <span id="songName">Keine Datei</span>
-    </div>
-
-    <!-- Butterchurn per ESM laden (funktioniert) -->
-    <script type="importmap">
-        {
-            "imports": {
-                "butterchurn": "https://cdn.jsdelivr.net/npm/butterchurn@2.6.7/+esm"
+        // Nimm die ersten 2 Presets (oder mehr, wenn du möchtest)
+        const selectedKeys = keys.slice(0, 2);
+        myPresets = selectedKeys.map(key => allPresets[key]);
+        myPresetKeys = selectedKeys;
+        addLog(`✅ ${myPresets.length} Presets geladen`, 'success');
+        addLog(`🎨 "${myPresetKeys[0]}" und "${myPresetKeys[1]}"`, 'success');
+    } catch (e) {
+        // Fallback: Versuche UMD (falls das ESM fehlschlägt)
+        addLog(`⚠️ ESM-Presets fehlgeschlagen: ${e.message}`, 'warn');
+        addLog('⏳ Versuche UMD-Presets...', 'info');
+        const presetsLib = await new Promise(resolve => {
+            if (typeof window.butterchurnPresets !== 'undefined') {
+                resolve(window.butterchurnPresets);
+                return;
             }
-        }
-    </script>
-
-    <!-- Butterchurn-Presets als UMD laden (ZUVERLÄSSIG) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/butterchurn-presets/2.6.7/butterchurn-presets.min.js">
-    </script>
-
-    <script type="module">
-        // ----- DEBUG-LOGGER -----
-        const logs = [];
-
-        function addLog(message, type = 'info') {
-            const timestamp = new Date().toLocaleTimeString();
-            logs.push({ message, type, timestamp });
-            if (logs.length > 80) logs.shift();
-            renderLog();
-            console.log(`[${type}]`, message);
-        }
-
-        function renderLog() {
-            const output = document.getElementById('logOutput');
-            if (!output) return;
-            const icons = { error: '❌', success: '✅', warn: '⚠️', info: 'ℹ️' };
-            const html = logs.map(log =>
-                `<span class="${log.type}">${icons[log.type] || 'ℹ️'} [${log.timestamp}] ${log.message}</span>`
-            ).join('<br />');
-            output.innerHTML = html;
-            const debugEl = document.getElementById('debug');
-            if (debugEl) debugEl.scrollTop = debugEl.scrollHeight;
-        }
-
-        document.getElementById('copyDebugBtn').addEventListener('click', function() {
-            const text = logs.map(l => `[${l.timestamp}] ${l.type.toUpperCase()}: ${l.message}`).join('\n');
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(text).then(() => {
-                    const orig = this.textContent;
-                    this.textContent = '✅';
-                    setTimeout(() => { this.textContent = orig; }, 1500);
-                }).catch(() => fallbackCopy(text, this));
-            } else {
-                fallbackCopy(text, this);
-            }
+            const check = setInterval(() => {
+                if (typeof window.butterchurnPresets !== 'undefined') {
+                    clearInterval(check);
+                    resolve(window.butterchurnPresets);
+                }
+            }, 100);
+            setTimeout(() => {
+                clearInterval(check);
+                resolve(null);
+            }, 3000);
         });
 
-        function fallbackCopy(text, button) {
-            const ta = document.createElement('textarea');
-            ta.value = text;
-            ta.style.position = 'fixed';
-            ta.style.opacity = '0';
-            document.body.appendChild(ta);
-            ta.select();
-            try {
-                document.execCommand('copy');
-                const orig = button.textContent;
-                button.textContent = '✅';
-                setTimeout(() => { button.textContent = orig; }, 1500);
-            } catch (e) {
-                alert('Log kopieren fehlgeschlagen:\n\n' + text);
-            }
-            document.body.removeChild(ta);
-        }
-
-        addLog('🚀 Seite geladen', 'info');
-
-        // ============================================================
-        // 1. BUTTERCHURN LADEN (ESM)
-        // ============================================================
-        addLog('⏳ Lade Butterchurn...', 'info');
-
-        let butterchurn;
-        try {
-            const module = await import('butterchurn');
-            butterchurn = module.default || module;
-            
-            if (butterchurn && typeof butterchurn === 'object' && butterchurn.default) {
-                butterchurn = butterchurn.default;
-            }
-            
-            if (typeof butterchurn.createVisualizer !== 'function') {
-                throw new Error('createVisualizer ist keine Funktion');
-            }
-            addLog('✅ Butterchurn geladen', 'success');
-        } catch (e) {
-            addLog(`❌ Butterchurn Fehler: ${e.message}`, 'error');
-            throw e;
-        }
-
-        // ============================================================
-        // 2. PRESETS LADEN (UMD – window.butterchurnPresets)
-        // ============================================================
-        addLog('⏳ Lade Presets (UMD)...', 'info');
-
-        let myPresets = [];
-        let myPresetKeys = [];
-
-        // Warte auf das UMD-Script (max. 5 Sekunden)
-        function waitForPresets() {
-            return new Promise((resolve) => {
-                if (typeof window.butterchurnPresets !== 'undefined') {
-                    resolve(window.butterchurnPresets);
-                    return;
-                }
-                const check = setInterval(() => {
-                    if (typeof window.butterchurnPresets !== 'undefined') {
-                        clearInterval(check);
-                        resolve(window.butterchurnPresets);
-                    }
-                }, 100);
-                setTimeout(() => {
-                    clearInterval(check);
-                    resolve(null);
-                }, 5000);
-            });
-        }
-
-        const presetsLib = await waitForPresets();
-        
         if (presetsLib && typeof presetsLib.getPresets === 'function') {
             try {
                 const allPresets = presetsLib.getPresets();
                 const keys = Object.keys(allPresets);
                 if (keys.length > 0) {
-                    // Nimm die ersten 2 Presets
-                    const selectedKeys = [keys[0], keys[Math.min(1, keys.length - 1)]];
+                    const selectedKeys = keys.slice(0, 2);
                     myPresets = selectedKeys.map(key => allPresets[key]);
                     myPresetKeys = selectedKeys;
                     addLog(`✅ ${myPresets.length} Presets von UMD geladen`, 'success');
-                    addLog(`🎨 "${myPresetKeys[0]}" und "${myPresetKeys[1]}"`, 'success');
-                } else {
-                    throw new Error('Keine Presets im Objekt');
                 }
-            } catch (e) {
-                addLog(`⚠️ Fehler beim Abrufen der Presets: ${e.message}`, 'warn');
+            } catch (err) {
+                addLog(`❌ UMD-Presets Fehler: ${err.message}`, 'error');
             }
         }
 
-        // Fallback: Minimal-Presets OHNE shader-Feld
         if (myPresets.length === 0) {
-            addLog('⚠️ Fallback-Presets (ohne shader)', 'warn');
-            myPresets = [
-                {
-                    "name": "Default",
-                    "params": { "zoom": 1.0, "rot": 0.0, "cx": 0.5, "cy": 0.5 },
-                    "shapes": [{ "x": 0.5, "y": 0.5, "sx": 0.3, "sy": 0.3, "points": 6, "rad": 0.5, "color": 1.0, "alpha": 0.8 }],
-                    "waves": [{ "x": 0.5, "y": 0.5, "sx": 0.4, "sy": 0.4, "points": 8, "rad": 0.4, "color": 1.0, "alpha": 0.7 }]
-                },
-                {
-                    "name": "Colorful",
-                    "params": { "zoom": 1.2, "rot": 0.05, "cx": 0.5, "cy": 0.5 },
-                    "shapes": [{ "x": 0.5, "y": 0.5, "sx": 0.4, "sy": 0.4, "points": 8, "rad": 0.6, "color": 1.0, "alpha": 0.9 }],
-                    "waves": [{ "x": 0.5, "y": 0.5, "sx": 0.3, "sy": 0.3, "points": 6, "rad": 0.5, "color": 1.0, "alpha": 0.8 }]
-                }
-            ];
-            myPresetKeys = ['Default', 'Colorful'];
+            addLog('❌ Keine Presets verfügbar – Preset-Funktion deaktiviert.', 'error');
+            // Buttons deaktivieren
+            document.getElementById('nextPresetBtn').disabled = true;
+            document.getElementById('prevPresetBtn').disabled = true;
         }
+    }
 
-        // ============================================================
-        // 3. VISUALIZER ERSTELLEN
-        // ============================================================
-        const container = document.getElementById('visualizer-container');
-        const canvas = document.createElement('canvas');
-        container.appendChild(canvas);
+    // ============================================================
+    // 3. VISUALIZER ERSTELLEN
+    // ============================================================
+    const container = document.getElementById('visualizer-container');
+    const canvas = document.createElement('canvas');
+    container.appendChild(canvas);
 
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        addLog(`🔊 AudioContext erstellt (${audioContext.state})`, 'success');
+    // AudioContext erst nach Nutzerinteraktion erstellen
+    let audioContext;
+    function initAudioContext() {
+        if (!audioContext) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            addLog(`🔊 AudioContext erstellt (${audioContext.state})`, 'success');
+        }
+        if (audioContext.state === 'suspended') {
+            audioContext.resume();
+        }
+    }
 
-        let visualizer;
+    let visualizer;
+    try {
+        // AudioContext wird hier noch nicht benötigt? Butterchurn braucht ihn aber.
+        // Deshalb vorher initAudioContext() aufrufen.
+        if (!audioContext) initAudioContext();
+        visualizer = butterchurn.createVisualizer(audioContext, canvas, {
+            width: window.innerWidth,
+            height: window.innerHeight,
+            pixelRatio: window.devicePixelRatio || 1,
+        });
+        addLog(`✅ Visualizer erstellt (${window.innerWidth}x${window.innerHeight})`, 'success');
+    } catch (e) {
+        addLog(`❌ Visualizer Fehler: ${e.message}`, 'error');
+        throw e;
+    }
+
+    // ============================================================
+    // 4. PRESET-LOGIK
+    // ============================================================
+    let currentPresetIndex = 0;
+    const presetLabel = document.getElementById('presetLabel');
+
+    function loadPreset(index) {
+        if (!visualizer || myPresets.length === 0) {
+            addLog('⚠️ Keine Presets verfügbar', 'warn');
+            return;
+        }
+        const preset = myPresets[index];
+        if (!preset) {
+            addLog(`⚠️ Preset ${index} nicht gefunden`, 'warn');
+            return;
+        }
         try {
-            visualizer = butterchurn.createVisualizer(audioContext, canvas, {
-                width: window.innerWidth,
-                height: window.innerHeight,
-                pixelRatio: window.devicePixelRatio || 1,
-            });
-            addLog(`✅ Visualizer erstellt (${window.innerWidth}x${window.innerHeight})`, 'success');
+            const name = myPresetKeys[index] || `Preset ${index+1}`;
+            visualizer.loadPreset(preset, 4.0);
+            presetLabel.textContent = `${name} (${index+1}/${myPresets.length})`;
+            addLog(`🎨 Preset geladen: ${name}`, 'success');
         } catch (e) {
-            addLog(`❌ Visualizer Fehler: ${e.message}`, 'error');
-            throw e;
+            addLog(`❌ Preset-Fehler: ${e.message}`, 'error');
         }
+    }
 
-        // ============================================================
-        // 4. PRESET-LOGIK
-        // ============================================================
-        let currentPresetIndex = 0;
-        const presetLabel = document.getElementById('presetLabel');
+    if (myPresets.length > 0) {
+        loadPreset(0);
+    } else {
+        presetLabel.textContent = 'Keine Presets';
+    }
 
-        function loadPreset(index) {
-            if (!visualizer || myPresets.length === 0) {
-                addLog('⚠️ Keine Presets verfügbar', 'warn');
-                return;
-            }
-            
-            const preset = myPresets[index];
-            if (!preset) {
-                addLog(`⚠️ Preset ${index} nicht gefunden`, 'warn');
-                return;
-            }
-            
-            try {
-                const name = myPresetKeys[index] || `Preset ${index+1}`;
-                visualizer.loadPreset(preset, 4.0);
-                presetLabel.textContent = `${name} (${index+1}/${myPresets.length})`;
-                addLog(`🎨 Preset geladen: ${name}`, 'success');
-            } catch (e) {
-                addLog(`❌ Preset-Fehler: ${e.message}`, 'error');
-            }
+    // ============================================================
+    // 5. AUDIO-LOGIK
+    // ============================================================
+    let audioElement = null;
+    let isPlaying = false;
+
+    function loadAudioFile(file) {
+        addLog(`📂 Lade: ${file.name} (${(file.size/1024).toFixed(0)} KB)`, 'info');
+        
+        if (audioElement) {
+            audioElement.pause();
+            audioElement.src = '';
+            audioElement = null;
         }
-
-        // Lade das erste Preset
-        if (myPresets.length > 0) {
-            loadPreset(0);
-        } else {
-            addLog('❌ Keine Presets verfügbar', 'error');
-        }
-
-        // ============================================================
-        // 5. AUDIO-LOGIK
-        // ============================================================
-        let audioElement = null;
-        let isPlaying = false;
-
-        function loadAudioFile(file) {
-            addLog(`📂 Lade: ${file.name} (${(file.size/1024).toFixed(0)} KB)`, 'info');
+        
+        try {
+            initAudioContext(); // stellt sicher, dass AudioContext aktiv ist
+            const url = URL.createObjectURL(file);
+            audioElement = new Audio(url);
             
-            if (audioElement) {
-                audioElement.pause();
-                audioElement.src = '';
-                audioElement = null;
-            }
+            const source = audioContext.createMediaElementSource(audioElement);
+            const analyser = audioContext.createAnalyser();
+            analyser.fftSize = 512;
             
-            try {
-                const url = URL.createObjectURL(file);
-                audioElement = new Audio(url);
-                
-                const source = audioContext.createMediaElementSource(audioElement);
-                const analyser = audioContext.createAnalyser();
-                analyser.fftSize = 512;
-                
-                source.connect(analyser);
-                analyser.connect(audioContext.destination);
-                
-                if (visualizer) {
-                    visualizer.connectAudio(analyser);
-                    addLog('🔗 Audio mit Visualizer verbunden', 'success');
-                } else {
-                    addLog('⚠️ Visualizer nicht bereit', 'warn');
-                }
-
-                audioElement.play().then(() => {
-                    isPlaying = true;
-                    document.getElementById('playBtn').textContent = '⏸️';
-                    document.getElementById('songName').textContent = file.name.length > 20 ? file.name.slice(0, 17) + '…' : file.name;
-                    addLog('▶️ Wiedergabe gestartet', 'success');
-                }).catch(err => {
-                    isPlaying = false;
-                    document.getElementById('playBtn').textContent = '▶️';
-                    addLog(`⚠️ Autoplay blockiert: ${err.message}`, 'warn');
-                });
-            } catch (e) {
-                addLog(`❌ Audio-Fehler: ${e.message}`, 'error');
-            }
-        }
-
-        // ============================================================
-        // 6. RENDERING
-        // ============================================================
-        function render() {
+            source.connect(analyser);
+            analyser.connect(audioContext.destination);
+            
             if (visualizer) {
-                try {
-                    visualizer.render();
-                } catch (e) {
-                    if (!render._errorLogged) {
-                        addLog(`❌ Render-Fehler: ${e.message}`, 'error');
-                        render._errorLogged = true;
-                    }
-                }
-            }
-            requestAnimationFrame(render);
-        }
-        render();
-        addLog('🔄 Rendering gestartet', 'info');
-
-        // ============================================================
-        // 7. EVENT-LISTENER
-        // ============================================================
-        document.getElementById('fileInput').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                if (audioContext.state === 'suspended') {
-                    audioContext.resume().then(() => addLog('✅ AudioContext resumed', 'success'));
-                }
-                loadAudioFile(file);
-            }
-            e.target.value = '';
-        });
-
-        document.getElementById('playBtn').addEventListener('click', () => {
-            if (!audioElement) {
-                document.getElementById('fileInput').click();
-                return;
-            }
-            if (audioContext.state === 'suspended') audioContext.resume();
-            
-            if (isPlaying) {
-                audioElement.pause();
-                document.getElementById('playBtn').textContent = '▶️';
-                isPlaying = false;
-                addLog('⏸️ Pause', 'info');
+                visualizer.connectAudio(analyser);
+                addLog('🔗 Audio mit Visualizer verbunden', 'success');
             } else {
-                audioElement.play().then(() => {
-                    document.getElementById('playBtn').textContent = '⏸️';
-                    isPlaying = true;
-                    addLog('▶️ Play', 'success');
-                }).catch(err => addLog(`❌ Play: ${err.message}`, 'error'));
+                addLog('⚠️ Visualizer nicht bereit', 'warn');
             }
-        });
 
-        document.getElementById('nextPresetBtn').addEventListener('click', () => {
-            if (myPresets.length === 0) return;
-            currentPresetIndex = (currentPresetIndex + 1) % myPresets.length;
-            loadPreset(currentPresetIndex);
-        });
+            audioElement.play().then(() => {
+                isPlaying = true;
+                document.getElementById('playBtn').textContent = '⏸️';
+                document.getElementById('songName').textContent = file.name.length > 20 ? file.name.slice(0, 17) + '…' : file.name;
+                addLog('▶️ Wiedergabe gestartet', 'success');
+            }).catch(err => {
+                isPlaying = false;
+                document.getElementById('playBtn').textContent = '▶️';
+                addLog(`⚠️ Autoplay blockiert: ${err.message}`, 'warn');
+            });
+        } catch (e) {
+            addLog(`❌ Audio-Fehler: ${e.message}`, 'error');
+        }
+    }
 
-        document.getElementById('prevPresetBtn').addEventListener('click', () => {
-            if (myPresets.length === 0) return;
-            currentPresetIndex = (currentPresetIndex - 1 + myPresets.length) % myPresets.length;
-            loadPreset(currentPresetIndex);
-        });
-
-        document.getElementById('volumeControl').addEventListener('input', (e) => {
-            if (audioElement) audioElement.volume = parseFloat(e.target.value);
-        });
-
-        window.addEventListener('resize', () => {
-            if (visualizer) {
-                visualizer.setRendererSize(window.innerWidth, window.innerHeight);
+    // ============================================================
+    // 6. RENDERING
+    // ============================================================
+    function render() {
+        if (visualizer) {
+            try {
+                visualizer.render();
+            } catch (e) {
+                if (!render._errorLogged) {
+                    addLog(`❌ Render-Fehler: ${e.message}`, 'error');
+                    render._errorLogged = true;
+                }
             }
-        });
+        }
+        requestAnimationFrame(render);
+    }
+    render();
+    addLog('🔄 Rendering gestartet', 'info');
 
-        document.addEventListener('keydown', (e) => {
-            if (e.target.tagName === 'INPUT') return;
-            if (e.code === 'Space') { e.preventDefault();
-                document.getElementById('playBtn').click(); }
-            if (e.key === 'ArrowRight') { document.getElementById('nextPresetBtn').click(); }
-            if (e.key === 'ArrowLeft') { document.getElementById('prevPresetBtn').click(); }
-        });
+    // ============================================================
+    // 7. EVENT-LISTENER
+    // ============================================================
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            loadAudioFile(file);
+        }
+        e.target.value = '';
+    });
 
-        addLog('✅ Alles bereit! Lade eine MP3-Datei.', 'success');
-        addLog('🎮 Leertaste = Play/Pause, Pfeiltasten = Presets', 'info');
-    </script>
-</body>
-</html>
+    document.getElementById('playBtn').addEventListener('click', () => {
+        if (!audioElement) {
+            document.getElementById('fileInput').click();
+            return;
+        }
+        initAudioContext();
+        
+        if (isPlaying) {
+            audioElement.pause();
+            document.getElementById('playBtn').textContent = '▶️';
+            isPlaying = false;
+            addLog('⏸️ Pause', 'info');
+        } else {
+            audioElement.play().then(() => {
+                document.getElementById('playBtn').textContent = '⏸️';
+                isPlaying = true;
+                addLog('▶️ Play', 'success');
+            }).catch(err => addLog(`❌ Play: ${err.message}`, 'error'));
+        }
+    });
+
+    document.getElementById('nextPresetBtn').addEventListener('click', () => {
+        if (myPresets.length === 0) return;
+        currentPresetIndex = (currentPresetIndex + 1) % myPresets.length;
+        loadPreset(currentPresetIndex);
+    });
+
+    document.getElementById('prevPresetBtn').addEventListener('click', () => {
+        if (myPresets.length === 0) return;
+        currentPresetIndex = (currentPresetIndex - 1 + myPresets.length) % myPresets.length;
+        loadPreset(currentPresetIndex);
+    });
+
+    document.getElementById('volumeControl').addEventListener('input', (e) => {
+        if (audioElement) audioElement.volume = parseFloat(e.target.value);
+    });
+
+    window.addEventListener('resize', () => {
+        if (visualizer) {
+            visualizer.setRendererSize(window.innerWidth, window.innerHeight);
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT') return;
+        if (e.code === 'Space') { e.preventDefault();
+            document.getElementById('playBtn').click(); }
+        if (e.key === 'ArrowRight') { document.getElementById('nextPresetBtn').click(); }
+        if (e.key === 'ArrowLeft') { document.getElementById('prevPresetBtn').click(); }
+    });
+
+    addLog('✅ Alles bereit! Lade eine MP3-Datei.', 'success');
+    addLog('🎮 Leertaste = Play/Pause, Pfeiltasten = Presets', 'info');
+</script>
