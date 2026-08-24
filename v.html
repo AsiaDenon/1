@@ -232,18 +232,18 @@
         addLog('🚀 Seite geladen', 'info');
 
         // ============================================================
-        // 1. ECHTE MILKDROP PRESETS (OHNE SHADER-CODE)
+        // 1. ECHTE MILKDROP PRESETS (MIT RICHTIGEM SHADER-FORMAT)
         // ============================================================
-        // Diese Presets enthalten keinen eigenen Shader-Code, sondern
-        // nutzen den Standard-Shader von Butterchurn.
-        // Sie bestehen nur aus Shapes und Waves – das reicht für 
-        // beeindruckende Visualisierungen.
+        // WICHTIG: Der Shader-Code muss ein JavaScript-Funktionskörper
+        // sein, der den GLSL-Shader als String zurückgibt.
+        // Das 'return'-Statement ist hier entscheidend!
         // ============================================================
 
         const myPresets = [
             // Preset 1: "Flexi, martin + geiss"
             {
                 "name": "Flexi, martin + geiss",
+                "shader": "return 'void main() { gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0); }';",
                 "params": {
                     "zoom": 1.0,
                     "rot": 0.0,
@@ -355,6 +355,7 @@
             // Preset 2: "Geiss - Trip to the Moon"
             {
                 "name": "Geiss - Trip to the Moon",
+                "shader": "return 'void main() { gl_FragColor = vec4(0.0, 0.0, 1.0, 1.0); }';",
                 "params": {
                     "zoom": 1.2,
                     "rot": 0.05,
