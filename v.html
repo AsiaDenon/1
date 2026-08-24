@@ -232,17 +232,18 @@
         addLog('🚀 Seite geladen', 'info');
 
         // ============================================================
-        // 1. ECHTE MILKDROP PRESETS (VOLLSTÄNDIG)
+        // 1. ECHTE MILKDROP PRESETS (OHNE SHADER-CODE)
         // ============================================================
-        // Diese Presets enthalten echten GLSL-Code und funktionieren
-        // mit Butterchurn. Sie sind aus der offiziellen MilkDrop-Sammlung.
+        // Diese Presets enthalten keinen eigenen Shader-Code, sondern
+        // nutzen den Standard-Shader von Butterchurn.
+        // Sie bestehen nur aus Shapes und Waves – das reicht für 
+        // beeindruckende Visualisierungen.
         // ============================================================
 
         const myPresets = [
-            // Preset 1: "Flexi - martin + geiss"
+            // Preset 1: "Flexi, martin + geiss"
             {
                 "name": "Flexi, martin + geiss",
-                "shader": "// MilkDrop Shader\n// Flexi, martin + geiss\n\n// This is a simplified but fully functional MilkDrop preset\n// It creates colorful, flowing shapes that react to the music\n\n// -------- WAVES ----------\n\n// Wave 1\n// Wave 2 (beat reactive)\n// Wave 3 (bass reactive)\n\n// -------- SHAPES ----------\n\n// Shape 1: Main shape (center)\n// Shape 2: Outer shape (border)\n// Shape 3: Beat-reactive shape\n\n// -------- MISC ----------\n// Dynamic zoom, rotation, and motion vectors\n\n// The shader code for this preset is intentionally kept simple\n// to ensure compatibility with all browsers",
                 "params": {
                     "zoom": 1.0,
                     "rot": 0.0,
@@ -260,20 +261,7 @@
                     "bass_dx": 0.0,
                     "bass_dy": 0.0,
                     "bass_sx": 0.0,
-                    "bass_sy": 0.0,
-                    "time": 0.0,
-                    "fps": 0.0,
-                    "frame": 0.0,
-                    "q": 0.0,
-                    "bass": 0.0,
-                    "mid": 0.0,
-                    "treb": 0.0,
-                    "bass_att": 0.0,
-                    "mid_att": 0.0,
-                    "treb_att": 0.0,
-                    "bass_att_s": 0.0,
-                    "mid_att_s": 0.0,
-                    "treb_att_s": 0.0
+                    "bass_sy": 0.0
                 },
                 "shapes": [
                     {
@@ -367,7 +355,6 @@
             // Preset 2: "Geiss - Trip to the Moon"
             {
                 "name": "Geiss - Trip to the Moon",
-                "shader": "// MilkDrop Shader\n// Geiss - Trip to the Moon\n\n// A psychedelic journey through space\n// This preset creates a tunnel effect with stars\n\n// -------- WAVES ----------\n// Wave 1: Main wave (tunnel effect)\n// Wave 2: Secondary wave (stars)\n// Wave 3: Beat-reactive wave\n\n// -------- SHAPES ----------\n// Shape 1: Tunnel shape\n// Shape 2: Center shape\n// Shape 3: Outer shape\n\n// -------- MISC ----------\n// Zoom, rotation, motion vectors\n// This preset simulates a trip through a colorful tunnel",
                 "params": {
                     "zoom": 1.2,
                     "rot": 0.05,
@@ -385,20 +372,7 @@
                     "bass_dx": 0.0,
                     "bass_dy": 0.0,
                     "bass_sx": 0.0,
-                    "bass_sy": 0.0,
-                    "time": 0.0,
-                    "fps": 0.0,
-                    "frame": 0.0,
-                    "q": 0.0,
-                    "bass": 0.0,
-                    "mid": 0.0,
-                    "treb": 0.0,
-                    "bass_att": 0.0,
-                    "mid_att": 0.0,
-                    "treb_att": 0.0,
-                    "bass_att_s": 0.0,
-                    "mid_att_s": 0.0,
-                    "treb_att_s": 0.0
+                    "bass_sy": 0.0
                 },
                 "shapes": [
                     {
