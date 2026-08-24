@@ -175,9 +175,6 @@
         }
     </script>
 
-    <!-- Butterchurn-Presets als UMD laden (korrekte jsDelivr-URL) -->
-    <script src="https://cdn.jsdelivr.net/npm/butterchurn-presets@2.6.7/butterchurn-presets.min.js"></script>
-
     <script type="module">
         // ----- DEBUG-LOGGER -----
         const logs = [];
@@ -254,50 +251,32 @@
                 addLog('✅ Butterchurn geladen', 'success');
             } catch (e) {
                 addLog(`❌ Butterchurn konnte nicht geladen werden: ${e.message}`, 'error');
-                return; // Abbruch, aber Seite bleibt bedienbar (nur Debug sichtbar)
+                return; // Abbruch, aber Seite bleibt bedienbar
             }
 
-            // 2. Presets laden (UMD)
-            addLog('⏳ Warte auf Presets (UMD)...', 'info');
+            // 2. Presets laden (ESM)
+            addLog('⏳ Lade Presets (ESM)...', 'info');
             let myPresets = [];
             let myPresetKeys = [];
 
-            // Warte bis window.butterchurnPresets verfügbar ist (max. 5 Sekunden)
-            const presetsLib = await new Promise(resolve => {
-                if (typeof window.butterchurnPresets !== 'undefined') {
-                    resolve(window.butterchurnPresets);
-                    return;
+            try {
+                const presetsModule = await import('https://cdn.jsdelivr.net/npm/butterchurn-presets@2.6.7/+esm');
+                const getPresets = presetsModule.getPresets || presetsModule.default?.getPresets;
+                if (typeof getPresets !== 'function') {
+                    throw new Error('getPresets nicht gefunden');
                 }
-                const check = setInterval(() => {
-                    if (typeof window.butterchurnPresets !== 'undefined') {
-                        clearInterval(check);
-                        resolve(window.butterchurnPresets);
-                    }
-                }, 100);
-                setTimeout(() => {
-                    clearInterval(check);
-                    resolve(null);
-                }, 5000);
-            });
+                const allPresets = getPresets();
+                const keys = Object.keys(allPresets);
+                if (keys.length === 0) throw new Error('Keine Presets im Objekt');
 
-            if (presetsLib && typeof presetsLib.getPresets === 'function') {
-                try {
-                    const allPresets = presetsLib.getPresets();
-                    const keys = Object.keys(allPresets);
-                    if (keys.length > 0) {
-                        const selectedKeys = keys.slice(0, 2);
-                        myPresets = selectedKeys.map(key => allPresets[key]);
-                        myPresetKeys = selectedKeys;
-                        addLog(`✅ ${myPresets.length} Presets geladen`, 'success');
-                        addLog(`🎨 "${myPresetKeys[0]}" und "${myPresetKeys[1]}"`, 'success');
-                    } else {
-                        throw new Error('Keine Presets im Objekt');
-                    }
-                } catch (e) {
-                    addLog(`⚠️ Fehler beim Verarbeiten der Presets: ${e.message}`, 'warn');
-                }
-            } else {
-                addLog('⚠️ Presets nicht verfügbar – Buttons werden deaktiviert.', 'warn');
+                // Nimm die ersten 2 Presets
+                const selectedKeys = keys.slice(0, 2);
+                myPresets = selectedKeys.map(key => allPresets[key]);
+                myPresetKeys = selectedKeys;
+                addLog(`✅ ${myPresets.length} Presets geladen`, 'success');
+                addLog(`🎨 "${myPresetKeys[0]}" und "${myPresetKeys[1]}"`, 'success');
+            } catch (e) {
+                addLog(`❌ Presets konnten nicht geladen werden: ${e.message}`, 'error');
                 document.getElementById('nextPresetBtn').disabled = true;
                 document.getElementById('prevPresetBtn').disabled = true;
             }
@@ -336,10 +315,7 @@
 
             let visualizer;
             try {
-                // AudioContext wird evtl. noch nicht erstellt, aber wir brauchen ihn.
-                // Deshalb erst jetzt initAudioContext aufrufen – das ist sicher, da wir uns in einer Benutzerinteraktion befinden? 
-                // Nein, init() läuft ohne Benutzerinteraktion – also müssen wir einen AudioContext erstellen, der suspended ist.
-                // Butterchurn erwartet einen AudioContext, auch wenn er suspended ist – das ist okay.
+                // AudioContext erstellen (kann suspended sein, das ist ok für Visualizer)
                 if (!audioContext) {
                     audioContext = new (window.AudioContext || window.webkitAudioContext)();
                     addLog(`🔊 AudioContext erstellt (${audioContext.state})`, 'success');
@@ -399,7 +375,6 @@
                 }
                 
                 try {
-                    // Sicherstellen, dass AudioContext aktiv ist (durch Benutzerinteraktion)
                     if (!audioContext) {
                         audioContext = initAudioContext();
                         if (!audioContext) {
