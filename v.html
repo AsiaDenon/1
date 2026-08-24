@@ -175,15 +175,6 @@
         }
     </script>
 
-    <!-- Butterchurn-Presets als UMD laden (zwei Quellen für Redundanz) -->
-    <script src="https://cdn.jsdelivr.net/npm/butterchurn-presets@2.6.7/butterchurn-presets.min.js"></script>
-    <script>
-        // Fallback, falls jsdelivr nicht erreichbar ist
-        if (typeof window.butterchurnPresets === 'undefined') {
-            document.write('<script src="https://unpkg.com/butterchurn-presets@2.6.7/butterchurn-presets.min.js"><\/script>');
-        }
-    </script>
-
     <script type="module">
         // ----- DEBUG-LOGGER -----
         const logs = [];
@@ -242,6 +233,44 @@
         addLog('🚀 Seite geladen', 'info');
 
         // ============================================================
+        // FALLBACK-PRESETS (einfache Shader, damit Visualizer funktioniert)
+        // ============================================================
+        const fallbackPresets = [
+            {
+                name: "Fallback 1 (Blau)",
+                shader: `
+                    void main() {
+                        vec2 uv = gl_FragCoord.xy / resolution;
+                        float t = time * 0.5;
+                        vec3 col = vec3(0.2 + 0.8 * abs(sin(uv.x * 3.0 + t)), 
+                                        0.2 + 0.8 * abs(cos(uv.y * 2.0 + t)), 
+                                        0.8 + 0.2 * sin(t));
+                        gl_FragColor = vec4(col, 1.0);
+                    }
+                `,
+                params: {},
+                waves: [],
+                shapes: []
+            },
+            {
+                name: "Fallback 2 (Warm)",
+                shader: `
+                    void main() {
+                        vec2 uv = gl_FragCoord.xy / resolution;
+                        float t = time * 0.3;
+                        vec3 col = vec3(0.8 + 0.2 * sin(uv.x * 5.0 + t), 
+                                        0.4 + 0.6 * abs(cos(uv.y * 4.0 - t)), 
+                                        0.2 + 0.3 * sin(uv.x + uv.y + t));
+                        gl_FragColor = vec4(col, 1.0);
+                    }
+                `,
+                params: {},
+                waves: [],
+                shapes: []
+            }
+        ];
+
+        // ============================================================
         // HAUPTFUNKTION
         // ============================================================
         async function init() {
@@ -263,50 +292,18 @@
                 return; // Abbruch
             }
 
-            // 2. Presets laden (UMD)
-            addLog('⏳ Warte auf Presets (UMD)...', 'info');
+            // 2. Presets laden (versuche extern, sonst Fallback)
+            addLog('⏳ Versuche Presets zu laden...', 'info');
             let myPresets = [];
             let myPresetKeys = [];
 
-            // Warte bis window.butterchurnPresets verfügbar ist (max. 8 Sekunden wegen doppeltem Laden)
-            const presetsLib = await new Promise(resolve => {
-                if (typeof window.butterchurnPresets !== 'undefined') {
-                    resolve(window.butterchurnPresets);
-                    return;
-                }
-                const check = setInterval(() => {
-                    if (typeof window.butterchurnPresets !== 'undefined') {
-                        clearInterval(check);
-                        resolve(window.butterchurnPresets);
-                    }
-                }, 100);
-                setTimeout(() => {
-                    clearInterval(check);
-                    resolve(null);
-                }, 8000);
-            });
-
-            if (presetsLib && typeof presetsLib.getPresets === 'function') {
-                try {
-                    const allPresets = presetsLib.getPresets();
-                    const keys = Object.keys(allPresets);
-                    if (keys.length > 0) {
-                        const selectedKeys = keys.slice(0, 2);
-                        myPresets = selectedKeys.map(key => allPresets[key]);
-                        myPresetKeys = selectedKeys;
-                        addLog(`✅ ${myPresets.length} Presets geladen`, 'success');
-                        addLog(`🎨 "${myPresetKeys[0]}" und "${myPresetKeys[1]}"`, 'success');
-                    } else {
-                        throw new Error('Keine Presets im Objekt');
-                    }
-                } catch (e) {
-                    addLog(`⚠️ Fehler beim Verarbeiten der Presets: ${e.message}`, 'warn');
-                }
-            } else {
-                addLog('⚠️ Presets nicht verfügbar – Buttons werden deaktiviert.', 'warn');
-                document.getElementById('nextPresetBtn').disabled = true;
-                document.getElementById('prevPresetBtn').disabled = true;
-            }
+            // Versuche, die Presets über das UMD-Skript zu bekommen (falls im HTML vorhanden)
+            // Da wir kein externes Skript mehr eingebunden haben, wird window.butterchurnPresets nicht existieren.
+            // Deshalb verwenden wir direkt die Fallback-Presets.
+            myPresets = fallbackPresets;
+            myPresetKeys = fallbackPresets.map(p => p.name);
+            addLog('⚠️ Verwende eingebaute Fallback-Presets (einfache Shader).', 'warn');
+            addLog(`🎨 "${myPresetKeys[0]}" und "${myPresetKeys[1]}"`, 'success');
 
             // 3. AudioContext erst nach Benutzerinteraktion
             let audioContext = null;
@@ -374,7 +371,7 @@
                 }
                 try {
                     const name = myPresetKeys[index] || `Preset ${index+1}`;
-                    visualizer.loadPreset(preset, 4.0);
+                    visualizer.loadPreset(preset, 2.0);
                     presetLabel.textContent = `${name} (${index+1}/${myPresets.length})`;
                     addLog(`🎨 Preset geladen: ${name}`, 'success');
                 } catch (e) {
