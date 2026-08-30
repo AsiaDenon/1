@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Autoplay-Hintergrund-Test</title>
+<style>
+  :root{--bg:#0f0f0f;--bg2:#1c1c1c;--border:#333;--text:#eee;--text2:#999;--ok:#4caf50;--warn:#e6a825;--err:#e05252}
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,Segoe UI,Roboto,sans-serif;margin:0;padding:16px;font-size:14px}
+  h1{font-size:18px;margin:0 0 4px}
+  .sub{color:var(--text2);margin:0 0 16px;font-size:12px}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+  input[type=text]{flex:1;min-width:200px;padding:8px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text)}
+  button{padding:8px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);cursor:pointer}
+  button:hover{background:#2a2a2a}
+  button.primary{background:#fff;color:#000;border-color:#000}
+  #player{width:100%;max-width:480px;aspect-ratio:16/9;background:#000;border-radius:8px}
+  .status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin:12px 0}
+  .status-box{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px}
+  .status-box .label{color:var(--text2);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+  .status-box .value{font-size:16px;margin-top:2px;font-variant-numeric:tabular-nums}
+  .value.ok{color:var(--ok)}
+  .value.warn{color:var(--warn)}
+  .value.err{color:var(--err)}
+  #log{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;height:360px;overflow-y:auto;font-family:ui-monospace,Consolas,monospace;font-size:12px;white-space:pre-wrap;word-break:break-word}
+  #log .l-heartbeat{color:var(--text2)}
+  #log .l-state{color:#7ec8e3}
+  #log .l-vis{color:var(--warn)}
+  #log .l-lifecycle{color:var(--err)}
+  #log .l-watchdog{color:var(--ok)}
+  .footer-row{display:flex;gap:8px;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>🧪 Autoplay-Hintergrund-Test</h1>
+<p class="sub">Isolierter Testplayer, unabhängig vom Dual Player. Zweck: messen statt raten, ob (a) JS-Timer im Hintergrund gedrosselt werden, (b) das YouTube <code>onStateChange</code>-Event verzögert/gar nicht ankommt, oder (c) die Seite komplett eingefroren wird (Page-Lifecycle <code>freeze</code>/<code>resume</code>).</p>
+
+<div class="row">
+  <input type="text" id="videoIdInput" placeholder="YouTube-Video-ID oder -URL" value="jNQXAC9IVRw">
+  <button class="primary" id="loadBtn">Laden</button>
+  <button id="playBtn">Play</button>
+  <button id="pauseBtn">Pause</button>
+</div>
+
+<video id="player-placeholder" style="display:none"></video>
+<div id="player"></div>
+
+<div class="status-grid">
+  <div class="status-box"><div class="label">Player-State</div><div class="value" id="stPlayer">–</div></div>
+  <div class="status-box"><div class="label">document.hidden</div><div class="value" id="stHidden">–</div></div>
+  <div class="status-box"><div class="label">visibilityState</div><div class="value" id="stVis">–</div></div>
+  <div class="status-box"><div class="label">Heartbeat-Drift</div><div class="value" id="stDrift">–</div></div>
+  <div class="status-box"><div class="label">Watchdog aktiv</div><div class="value" id="stWatchdog">nein</div></div>
+  <div class="status-box"><div class="label">Log-Einträge</div><div class="value" id="stCount">0</div></div>
+</div>
+
+<div id="log"></div>
+<div class="footer-row">
+  <button id="clearBtn">Log leeren</button>
+  <button id="copyBtn">Log kopieren</button>
+  <button id="downloadBtn">Log herunterladen (.txt)</button>
+</div>
+
+<script>
+const STATE_NAMES = {'-1':'UNSTARTED','0':'ENDED','1':'PLAYING','2':'PAUSED','3':'BUFFERING','5':'CUED'};
+const LOG_KEY = 'autoplay_test_log_v1';
+let logEntries = [];
+let player = null;
+let watchdogInterval = null;
+let userPaused = false;
+
+function loadStoredLog(){
+  try{
+    const raw = localStorage.getItem(LOG_KEY);
+    if(raw) logEntries = JSON.parse(raw);
+  }catch(e){}
+}
+function persistLog(){
+  try{ localStorage.setItem(LOG_KEY, JSON.stringify(logEntries.slice(-2000))); }catch(e){}
+}
+function fmtTime(ts){
+  const d = new Date(ts);
+  return d.toLocaleTimeString('de-DE',{hour12:false}) + '.' + String(d.getMilliseconds()).padStart(3,'0');
+}
+function log(type, msg){
+  const entry = { ts: Date.now(), type, msg };
+  logEntries.push(entry);
+  persistLog();
+  renderLogEntry(entry);
+  document.getElementById('stCount').textContent = logEntries.length;
+}
+function renderLogEntry(entry){
+  const el = document.getElementById('log');
+  const line = document.createElement('div');
+  line.className = 'l-' + entry.type;
+  line.textContent = `[${fmtTime(entry.ts)}] ${entry.msg}`;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+function renderAllLog(){
+  const el = document.getElementById('log');
+  el.innerHTML = '';
+  logEntries.forEach(renderLogEntry);
+  document.getElementById('stCount').textContent = logEntries.length;
+}
+
+function extractVideoId(input){
+  const t = input.trim();
+  if(/^[a-zA-Z0-9_-]{11}$/.test(t)) return t;
+  try{
+    const u = new URL(t);
+    if(u.hostname === 'youtu.be') return u.pathname.slice(1).split('/')[0];
+    if(u.hostname.includes('youtube.com')) return u.searchParams.get('v') || t;
+  }catch(e){}
+  return t;
+}
+
+// --- Heartbeat: misst reine JS-Timer-Drosselung, unabhängig vom YouTube-Player ---
+let lastHeartbeat = performance.now();
+setInterval(function(){
+  const now = performance.now();
+  const drift = now - lastHeartbeat - 1000;
+  lastHeartbeat = now;
+  const driftEl = document.getElementById('stDrift');
+  driftEl.textContent = (drift >= 0 ? '+' : '') + Math.round(drift) + 'ms';
+  driftEl.className = 'value ' + (Math.abs(drift) < 200 ? 'ok' : Math.abs(drift) < 3000 ? 'warn' : 'err');
+  if(Math.abs(drift) > 200){
+    log('heartbeat', `Timer-Drift: ${Math.round(drift)}ms (Sollintervall 1000ms) — deutet auf gedrosselte/eingefrorene JS-Timer hin, falls groß`);
+  }
+}, 1000);
+
+// --- Visibility & Page-Lifecycle ---
+function updateVisBoxes(){
+  document.getElementById('stHidden').textContent = document.hidden;
+  document.getElementById('stVis').textContent = document.visibilityState;
+}
+updateVisBoxes();
+document.addEventListener('visibilitychange', function(){
+  updateVisBoxes();
+  log('vis', `visibilitychange -> hidden=${document.hidden}, visibilityState=${document.visibilityState}`);
+  if(document.hidden){
+    startWatchdog();
+  } else {
+    stopWatchdog();
+  }
+});
+window.addEventListener('blur', () => log('vis', 'window blur'));
+window.addEventListener('focus', () => log('vis', 'window focus'));
+// Page Lifecycle API (Chromium/Edge): zeigt an, wenn die Seite komplett eingefroren wird
+document.addEventListener('freeze', () => log('lifecycle', '⚠ PAGE FREEZE — Seite wird von Chromium komplett eingefroren (JS pausiert bis Resume)'));
+document.addEventListener('resume', () => log('lifecycle', 'PAGE RESUME — Seite wird wieder aufgeweckt'));
+
+// --- Watchdog: exakte Nachbildung des Mechanismus aus dem Dual Player ---
+function startWatchdog(){
+  if(watchdogInterval) return;
+  document.getElementById('stWatchdog').textContent = 'ja (1500ms)';
+  watchdogInterval = setInterval(function(){
+    if(!player || typeof player.getPlayerState !== 'function') return;
+    const st = player.getPlayerState();
+    log('watchdog', `Tick — Player-State=${st} (${STATE_NAMES[st]||'?'}), userPaused=${userPaused}`);
+    if(!userPaused && st !== 1 && st !== 3){
+      log('watchdog', `→ rufe player.playVideo() auf (State war ${STATE_NAMES[st]||st})`);
+      player.playVideo();
+    }
+  }, 1500);
+}
+function stopWatchdog(){
+  if(watchdogInterval){ clearInterval(watchdogInterval); watchdogInterval = null; }
+  document.getElementById('stWatchdog').textContent = 'nein';
+}
+
+// --- YouTube IFrame API ---
+let ytApiReady = false;
+window.onYouTubeIframeAPIReady = function(){ ytApiReady = true; log('state', 'YouTube IFrame API bereit'); };
+(function(){
+  const tag = document.createElement('script');
+  tag.src = 'https://www.youtube.com/iframe_api';
+  document.head.appendChild(tag);
+})();
+
+function loadVideo(id){
+  userPaused = false;
+  if(player && typeof player.loadVideoById === 'function'){
+    player.loadVideoById(id);
+    log('state', `loadVideoById(${id}) auf bestehendem Player`);
+    return;
+  }
+  player = new YT.Player('player', {
+    videoId: id,
+    playerVars: { autoplay: 1, controls: 1, playsinline: 1, enablejsapi: 1, origin: window.location.origin },
+    events: {
+      onReady: function(){ log('state', `onReady — Video ${id} geladen`); },
+      onStateChange: function(e){
+        const st = e.data;
+        document.getElementById('stPlayer').textContent = `${st} (${STATE_NAMES[st]||'?'})`;
+        let cur = '?', dur = '?';
+        try{ cur = e.target.getCurrentTime().toFixed(1); dur = e.target.getDuration().toFixed(1); }catch(err){}
+        log('state', `onStateChange -> ${st} (${STATE_NAMES[st]||'?'}), currentTime=${cur}s / duration=${dur}s, hidden=${document.hidden}`);
+        if(st === 2) userPaused = !document.hidden ? true : userPaused;
+        if(st === 1) userPaused = false;
+        if(st === 0){
+          log('state', '★ VIDEO ENDED (State 0) empfangen — Zeitpunkt ist der entscheidende Messwert für den Vergleich mit dem Zeitpunkt, an dem das Video tatsächlich zu Ende ging.');
+        }
+      },
+      onError: function(e){ log('state', `onError -> ${e.data}`); }
+    }
+  });
+}
+
+document.getElementById('loadBtn').addEventListener('click', function(){
+  const id = extractVideoId(document.getElementById('videoIdInput').value);
+  if(!id) return;
+  if(!ytApiReady){
+    log('state', 'API noch nicht bereit, warte...');
+    const iv = setInterval(function(){ if(ytApiReady){ clearInterval(iv); loadVideo(id); } }, 200);
+    return;
+  }
+  loadVideo(id);
+});
+document.getElementById('playBtn').addEventListener('click', function(){
+  userPaused = false;
+  if(player && player.playVideo) player.playVideo();
+});
+document.getElementById('pauseBtn').addEventListener('click', function(){
+  userPaused = true;
+  if(player && player.pauseVideo) player.pauseVideo();
+});
+document.getElementById('clearBtn').addEventListener('click', function(){
+  logEntries = [];
+  persistLog();
+  renderAllLog();
+});
+document.getElementById('copyBtn').addEventListener('click', function(){
+  const text = logEntries.map(e => `[${fmtTime(e.ts)}] ${e.type}: ${e.msg}`).join('\n');
+  navigator.clipboard.writeText(text).then(function(){
+    const btn = document.getElementById('copyBtn');
+    const orig = btn.textContent;
+    btn.textContent = 'Kopiert ✓';
+    setTimeout(() => btn.textContent = orig, 1500);
+  });
+});
+document.getElementById('downloadBtn').addEventListener('click', function(){
+  const text = logEntries.map(e => `[${fmtTime(e.ts)}] ${e.type}: ${e.msg}`).join('\n');
+  const blob = new Blob([text], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'autoplay-test-log.txt';
+  a.click();
+});
+
+// Initiales Log-Rendering (aus vorheriger Session, falls Seite neu geladen wurde)
+loadStoredLog();
+renderAllLog();
+log('state', 'Testseite geladen/neu geladen.');
+</script>
+</body>
+</html>
