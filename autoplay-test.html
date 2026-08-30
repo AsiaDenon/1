@@ -42,6 +42,12 @@
   <button id="playBtn">Play</button>
   <button id="pauseBtn">Pause</button>
 </div>
+<div class="row">
+  <label><input type="checkbox" id="modeRecreate"> Modus B: bei Videoende Player komplett neu erstellen (wie <code>U()</code>/<code>playAutoNext()</code> im Dual Player)</label>
+</div>
+<div class="row">
+  <label><input type="checkbox" id="modeMuted"> dabei stummgeschaltet laden (Autoplay-Policy-Workaround testen)</label>
+</div>
 
 <video id="player-placeholder" style="display:none"></video>
 <div id="player"></div>
@@ -179,6 +185,35 @@ window.onYouTubeIframeAPIReady = function(){ ytApiReady = true; log('state', 'Yo
   document.head.appendChild(tag);
 })();
 
+function buildEvents(label){
+  return {
+    onReady: function(){
+      log('state', `onReady [${label}] — hidden=${document.hidden}`);
+      setTimeout(function(){
+        try{
+          const st = player.getPlayerState();
+          log('state', `[${label}] Statuscheck 2s nach onReady: State=${st} (${STATE_NAMES[st]||'?'}) — ${st===1?'spielt ✓':'spielt NICHT (vermutlich Autoplay blockiert) ✗'}`);
+        }catch(e){}
+      }, 2000);
+    },
+    onStateChange: function(e){
+      const st = e.data;
+      document.getElementById('stPlayer').textContent = `${st} (${STATE_NAMES[st]||'?'})`;
+      let cur = '?', dur = '?';
+      try{ cur = e.target.getCurrentTime().toFixed(1); dur = e.target.getDuration().toFixed(1); }catch(err){}
+      log('state', `onStateChange [${label}] -> ${st} (${STATE_NAMES[st]||'?'}), currentTime=${cur}s / duration=${dur}s, hidden=${document.hidden}`);
+      if(st === 2) userPaused = !document.hidden ? true : userPaused;
+      if(st === 1) userPaused = false;
+      if(st === 0){
+        log('state', `★ VIDEO ENDED [${label}] (State 0) empfangen bei hidden=${document.hidden}`);
+        const recreate = document.getElementById('modeRecreate').checked;
+        if(recreate) recreatePlayerAndAutoplay();
+      }
+    },
+    onError: function(e){ log('state', `onError [${label}] -> ${e.data}`); }
+  };
+}
+
 function loadVideo(id){
   userPaused = false;
   if(player && typeof player.loadVideoById === 'function'){
@@ -189,22 +224,21 @@ function loadVideo(id){
   player = new YT.Player('player', {
     videoId: id,
     playerVars: { autoplay: 1, controls: 1, playsinline: 1, enablejsapi: 1, origin: window.location.origin },
-    events: {
-      onReady: function(){ log('state', `onReady — Video ${id} geladen`); },
-      onStateChange: function(e){
-        const st = e.data;
-        document.getElementById('stPlayer').textContent = `${st} (${STATE_NAMES[st]||'?'})`;
-        let cur = '?', dur = '?';
-        try{ cur = e.target.getCurrentTime().toFixed(1); dur = e.target.getDuration().toFixed(1); }catch(err){}
-        log('state', `onStateChange -> ${st} (${STATE_NAMES[st]||'?'}), currentTime=${cur}s / duration=${dur}s, hidden=${document.hidden}`);
-        if(st === 2) userPaused = !document.hidden ? true : userPaused;
-        if(st === 1) userPaused = false;
-        if(st === 0){
-          log('state', '★ VIDEO ENDED (State 0) empfangen — Zeitpunkt ist der entscheidende Messwert für den Vergleich mit dem Zeitpunkt, an dem das Video tatsächlich zu Ende ging.');
-        }
-      },
-      onError: function(e){ log('state', `onError -> ${e.data}`); }
-    }
+    events: buildEvents('initial')
+  });
+}
+
+// Nachbildet exakt U()/playAutoNext() aus dem Dual Player: Player wird zerstört und
+// komplett neu erstellt (statt playVideoById/playVideo auf bestehendem Objekt).
+function recreatePlayerAndAutoplay(){
+  const id = extractVideoId(document.getElementById('videoIdInput').value);
+  const muted = document.getElementById('modeMuted').checked;
+  log('state', `Modus B: player.destroy() + neuer YT.Player — autoplay=1, mute=${muted?1:0}, hidden=${document.hidden}`);
+  try{ if(player && player.destroy) player.destroy(); }catch(e){}
+  player = new YT.Player('player', {
+    videoId: id,
+    playerVars: { autoplay: 1, controls: 1, playsinline: 1, enablejsapi: 1, mute: muted?1:0, origin: window.location.origin },
+    events: buildEvents('recreated')
   });
 }
 
