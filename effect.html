@@ -19,17 +19,16 @@
   canvas{width:100%;height:70px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;display:block;margin-bottom:14px}
   .fx{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:10px}
   .fx-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
-  .fx-head label{font-weight:600;font-size:14px;flex:1;display:flex;align-items:center;gap:6px}
-  .fx-head input[type=checkbox]{width:16px;height:16px}
+  .fx-head label{font-weight:600;font-size:14px;flex:1}
+  .fx-hint{color:var(--text2);font-size:11px;margin:-4px 0 8px}
   .preset-row{display:flex;align-items:center;gap:8px;margin:6px 0 10px}
   .preset-row label{width:110px;color:var(--text2);font-size:12px;flex-shrink:0}
   .preset-row select{flex:1}
   .row{display:flex;align-items:center;gap:8px;margin:6px 0}
   .row label{width:110px;color:var(--text2);font-size:12px;flex-shrink:0}
   .row input[type=range]{flex:1}
-  .row .val{width:70px;text-align:right;font-variant-numeric:tabular-nums;font-size:12px;color:var(--text2)}
-  .fx.disabled .row{opacity:.35;pointer-events:none}
-  .fx.disabled .preset-row{opacity:.35;pointer-events:none}
+  .row .val{width:80px;text-align:right;font-variant-numeric:tabular-nums;font-size:12px;color:var(--text2)}
+  .row.mix-row .val{color:var(--accent);font-weight:600}
   .master{display:flex;align-items:center;gap:8px;margin:12px 0}
   .master label{width:110px;color:var(--text2);font-size:12px}
   .footer-row{display:flex;gap:8px;margin-top:6px}
@@ -37,7 +36,7 @@
 </head>
 <body>
 <h1>🎛️ Effekt-Mockup</h1>
-<p class="sub">Isolierter Testbereich für neue Mixer-Effekte, unabhängig vom Dual Player. Datei laden oder Testton nutzen, Effekte einzeln an/aus schalten und Regler live verstellen. Passende Werte gefunden? Unten als JSON kopieren und mir schicken – dann bauen wir genau das in den Dual Player ein.</p>
+<p class="sub">Isolierter Testbereich für neue Mixer-Effekte, unabhängig vom Dual Player. Datei laden oder Testton nutzen, Regler live verstellen. Bei allen Effekten gilt: Grundstellung (Mitte bzw. 0%) = komplett unhörbar, du blendest den Effekt selbst über den jeweiligen Hauptregler ein. Passende Werte gefunden? Unten als JSON kopieren und mir schicken.</p>
 
 <div class="source-row">
   <input type="file" id="fileInput" accept="audio/*" style="flex:1;min-width:180px">
@@ -47,12 +46,14 @@
 <canvas id="scope" width="600" height="70"></canvas>
 
 <div class="fx" id="fxFilter">
-  <div class="fx-head"><label>Filter (Mitte = aus, links = Hochpass, rechts = Tiefpass)</label></div>
+  <div class="fx-head"><label>Filter</label></div>
+  <p class="fx-hint">Mitte = aus, links = Hochpass, rechts = Tiefpass</p>
   <div class="row"><label>Position</label><input type="range" id="filterSlider" min="-100" max="100" value="0" step="1"><span class="val" id="filterSliderVal">Aus</span></div>
 </div>
 
 <div class="fx" id="fxFlanger">
-  <div class="fx-head"><label><input type="checkbox" id="flangerEnabled">Flanger</label></div>
+  <div class="fx-head"><label>Flanger</label></div>
+  <p class="fx-hint">Mix bei 0% = kompletter Nullpunkt, unhörbar. Das ist dein Ein/Aus-Regler.</p>
   <div class="preset-row"><label>Preset</label><select id="flangerPreset">
     <option value="custom">Eigene Werte</option>
     <option value="subtle">Sanft</option>
@@ -60,15 +61,16 @@
     <option value="jetsweep">Intensiv (Jet-Sweep)</option>
     <option value="slowwobble">Langsam &amp; warm</option>
   </select></div>
+  <div class="row mix-row"><label>Mix</label><input type="range" id="flangerMix" min="0" max="100" value="0" step="1"><span class="val" id="flangerMixVal">0% (aus)</span></div>
   <div class="row"><label>Rate</label><input type="range" id="flangerRate" min="0.05" max="5" value="0.25" step="0.05"><span class="val" id="flangerRateVal">0.25 Hz</span></div>
   <div class="row"><label>Tiefe</label><input type="range" id="flangerDepth" min="0" max="10" value="3" step="0.1"><span class="val" id="flangerDepthVal">3.0 ms</span></div>
   <div class="row"><label>Basis-Delay</label><input type="range" id="flangerBase" min="1" max="15" value="5" step="0.5"><span class="val" id="flangerBaseVal">5.0 ms</span></div>
   <div class="row"><label>Feedback</label><input type="range" id="flangerFeedback" min="0" max="0.9" value="0.5" step="0.01"><span class="val" id="flangerFeedbackVal">50%</span></div>
-  <div class="row"><label>Mix</label><input type="range" id="flangerMix" min="0" max="100" value="50" step="1"><span class="val" id="flangerMixVal">50%</span></div>
 </div>
 
 <div class="fx" id="fxEcho">
-  <div class="fx-head"><label><input type="checkbox" id="echoEnabled">Echo</label></div>
+  <div class="fx-head"><label>Echo</label></div>
+  <p class="fx-hint">Mix bei 0% = kompletter Nullpunkt, unhörbar. Das ist dein Ein/Aus-Regler.</p>
   <div class="preset-row"><label>Preset</label><select id="echoPreset">
     <option value="custom">Eigene Werte</option>
     <option value="slapback">Slapback (kurz, knackig)</option>
@@ -77,9 +79,9 @@
     <option value="dub">Dub (lang, tragend)</option>
     <option value="ambient">Ambient (sehr lang)</option>
   </select></div>
+  <div class="row mix-row"><label>Mix</label><input type="range" id="echoMix" min="0" max="100" value="0" step="1"><span class="val" id="echoMixVal">0% (aus)</span></div>
   <div class="row"><label>Delay-Zeit</label><input type="range" id="echoDelay" min="50" max="1000" value="300" step="10"><span class="val" id="echoDelayVal">300 ms</span></div>
   <div class="row"><label>Feedback</label><input type="range" id="echoFeedback" min="0" max="0.9" value="0.35" step="0.01"><span class="val" id="echoFeedbackVal">35%</span></div>
-  <div class="row"><label>Mix</label><input type="range" id="echoMix" min="0" max="100" value="35" step="1"><span class="val" id="echoMixVal">35%</span></div>
 </div>
 
 <div class="master">
@@ -87,7 +89,7 @@
 </div>
 
 <div class="footer-row">
-  <button id="resetBtn">Alle Effekte aus</button>
+  <button id="resetBtn">Alle Effekte auf 0</button>
   <button id="copyBtn">Werte als JSON kopieren</button>
 </div>
 
@@ -115,7 +117,6 @@ const ECHO_PRESETS = {
 
 function ensureCtx(){ if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); return audioCtx; }
 function fval(id){ return parseFloat(document.getElementById(id).value); }
-function checked(id){ return document.getElementById(id).checked; }
 
 function combinedFilterParams(v){
   if(v < -0.5){
@@ -128,13 +129,11 @@ function combinedFilterParams(v){
   return { type:'allpass', freq: 1000 };
 }
 
-function stopLFOs(){
-  if(flangerNodes && flangerNodes.lfo){ try{ flangerNodes.lfo.stop(); }catch(e){} try{ flangerNodes.lfo.disconnect(); }catch(e){} flangerNodes.lfo = null; }
-}
-
+// Baut die Kette EINMAL vollständig auf (bei jeder neuen Quelle). Flanger/Echo sind danach
+// dauerhaft im Signalpfad; Mix=0 macht sie unhörbar, ohne dass neu verkabelt werden muss.
 function rebuildChain(){
   if(!audioCtx || !sourceNode) return;
-  stopLFOs();
+  if(flangerNodes && flangerNodes.lfo){ try{ flangerNodes.lfo.stop(); }catch(e){} try{ flangerNodes.lfo.disconnect(); }catch(e){} }
   try{ sourceNode.disconnect(); }catch(e){}
   try{ if(filterNode) filterNode.disconnect(); }catch(e){}
   try{ if(flangerNodes){ Object.values(flangerNodes).forEach(function(n){ if(n&&n.disconnect) try{n.disconnect();}catch(e){} }); } }catch(e){}
@@ -148,7 +147,7 @@ function rebuildChain(){
   filterNode.frequency.value = fp.freq;
   node.connect(filterNode); node = filterNode;
 
-  if(checked('flangerEnabled')){
+  {
     const input = node;
     const dry = audioCtx.createGain(); dry.gain.value = 1 - fval('flangerMix')/100;
     const wet = audioCtx.createGain(); wet.gain.value = fval('flangerMix')/100;
@@ -163,9 +162,9 @@ function rebuildChain(){
     lfo.start();
     flangerNodes = {dry:dry, wet:wet, delay:delay, lfo:lfo, depthGain:depthGain, feedback:feedback, merge:merge};
     node = merge;
-  } else { flangerNodes = null; }
+  }
 
-  if(checked('echoEnabled')){
+  {
     const input = node;
     const dry = audioCtx.createGain(); dry.gain.value = 1 - fval('echoMix')/100;
     const wet = audioCtx.createGain(); wet.gain.value = fval('echoMix')/100;
@@ -176,7 +175,7 @@ function rebuildChain(){
     input.connect(delay); delay.connect(feedback); feedback.connect(delay); delay.connect(wet); wet.connect(merge);
     echoNodes = {dry:dry, wet:wet, delay:delay, feedback:feedback, merge:merge};
     node = merge;
-  } else { echoNodes = null; }
+  }
 
   node.connect(masterGain);
 }
@@ -272,19 +271,14 @@ document.getElementById('playPauseBtn').addEventListener('click', function(){
   }
 });
 
-['flangerEnabled','echoEnabled'].forEach(function(id){
-  document.getElementById(id).addEventListener('change', function(){
-    document.getElementById('fx' + id.charAt(0).toUpperCase() + id.slice(1).replace('Enabled','')).classList.toggle('disabled', !this.checked);
-    rebuildChain();
-  });
-});
-
-function liveSlider(sliderId, labelId, suffix, apply){
+function liveSlider(sliderId, labelId, suffix, apply, offAtZero){
   const el = document.getElementById(sliderId);
   const lbl = document.getElementById(labelId);
   function update(){
     const v = fval(sliderId);
-    lbl.textContent = (Number.isInteger(v) ? v : v.toFixed(v<10?2:0)) + suffix;
+    let text = (Number.isInteger(v) ? v : v.toFixed(v<10?2:0)) + suffix;
+    if(offAtZero && v===0) text += ' (aus)';
+    lbl.textContent = text;
     apply(v);
     if(!applyingPreset){
       if(['flangerRate','flangerDepth','flangerBase','flangerFeedback','flangerMix'].indexOf(sliderId)!==-1) document.getElementById('flangerPreset').value='custom';
@@ -304,14 +298,14 @@ document.getElementById('filterSlider').addEventListener('input', function(){
   if(filterNode){ filterNode.type = fp.type; filterNode.frequency.value = fp.freq; }
 });
 
+liveSlider('flangerMix','flangerMixVal','%', function(v){ if(flangerNodes){ flangerNodes.dry.gain.value = 1-v/100; flangerNodes.wet.gain.value = v/100; } }, true);
 liveSlider('flangerRate','flangerRateVal',' Hz', function(v){ if(flangerNodes) flangerNodes.lfo.frequency.value = v; });
 liveSlider('flangerDepth','flangerDepthVal',' ms', function(v){ if(flangerNodes) flangerNodes.depthGain.gain.value = v/1000; });
 liveSlider('flangerBase','flangerBaseVal',' ms', function(v){ if(flangerNodes) flangerNodes.delay.delayTime.value = v/1000; });
 liveSlider('flangerFeedback','flangerFeedbackVal','%', function(v){ if(flangerNodes) flangerNodes.feedback.gain.value = v; document.getElementById('flangerFeedbackVal').textContent = Math.round(v*100)+'%'; });
-liveSlider('flangerMix','flangerMixVal','%', function(v){ if(flangerNodes){ flangerNodes.dry.gain.value = 1-v/100; flangerNodes.wet.gain.value = v/100; } });
+liveSlider('echoMix','echoMixVal','%', function(v){ if(echoNodes){ echoNodes.dry.gain.value = 1-v/100; echoNodes.wet.gain.value = v/100; } }, true);
 liveSlider('echoDelay','echoDelayVal',' ms', function(v){ if(echoNodes) echoNodes.delay.delayTime.value = v/1000; });
 liveSlider('echoFeedback','echoFeedbackVal','%', function(v){ if(echoNodes) echoNodes.feedback.gain.value = v; document.getElementById('echoFeedbackVal').textContent = Math.round(v*100)+'%'; });
-liveSlider('echoMix','echoMixVal','%', function(v){ if(echoNodes){ echoNodes.dry.gain.value = 1-v/100; echoNodes.wet.gain.value = v/100; } });
 liveSlider('masterVol','masterVolVal','%', function(v){ if(masterGain) masterGain.gain.value = v/100; });
 
 function applyPreset(sliderIds, values){
@@ -328,40 +322,34 @@ document.getElementById('flangerPreset').addEventListener('change', function(){
   const name = this.value;
   if(name === 'custom') return;
   const p = FLANGER_PRESETS[name];
-  document.getElementById('flangerEnabled').checked = true;
-  document.getElementById('fxFlanger').classList.remove('disabled');
-  applyPreset(['flangerRate','flangerDepth','flangerBase','flangerFeedback','flangerMix'], [p.rate,p.depth,p.base,p.feedback,p.mix]);
-  rebuildChain();
+  applyPreset(['flangerMix','flangerRate','flangerDepth','flangerBase','flangerFeedback'], [p.mix,p.rate,p.depth,p.base,p.feedback]);
 });
 
 document.getElementById('echoPreset').addEventListener('change', function(){
   const name = this.value;
   if(name === 'custom') return;
   const p = ECHO_PRESETS[name];
-  document.getElementById('echoEnabled').checked = true;
-  document.getElementById('fxEcho').classList.remove('disabled');
-  applyPreset(['echoDelay','echoFeedback','echoMix'], [p.delay,p.feedback,p.mix]);
-  rebuildChain();
+  applyPreset(['echoMix','echoDelay','echoFeedback'], [p.mix,p.delay,p.feedback]);
 });
 
 document.getElementById('resetBtn').addEventListener('click', function(){
-  document.getElementById('filterSlider').value = 0;
-  document.getElementById('filterSlider').dispatchEvent(new Event('input'));
-  ['flangerEnabled','echoEnabled'].forEach(function(id){
-    document.getElementById(id).checked = false;
-    document.getElementById('fx' + id.charAt(0).toUpperCase() + id.slice(1).replace('Enabled','')).classList.add('disabled');
+  applyingPreset = true;
+  [['filterSlider',0],['flangerMix',0],['echoMix',0]].forEach(function(pair){
+    const el = document.getElementById(pair[0]);
+    el.value = pair[1];
+    el.dispatchEvent(new Event('input'));
   });
+  applyingPreset = false;
   document.getElementById('flangerPreset').value = 'custom';
   document.getElementById('echoPreset').value = 'custom';
-  rebuildChain();
 });
 
 document.getElementById('copyBtn').addEventListener('click', function(){
   const fp = combinedFilterParams(fval('filterSlider'));
   const settings = {
     filter: { type: fp.type, freq: Math.round(fp.freq), sliderPosition: fval('filterSlider') },
-    flanger: { enabled: checked('flangerEnabled'), preset: document.getElementById('flangerPreset').value, rate: fval('flangerRate'), depthMs: fval('flangerDepth'), baseDelayMs: fval('flangerBase'), feedback: fval('flangerFeedback'), mixPercent: fval('flangerMix') },
-    echo: { enabled: checked('echoEnabled'), preset: document.getElementById('echoPreset').value, delayMs: fval('echoDelay'), feedback: fval('echoFeedback'), mixPercent: fval('echoMix') }
+    flanger: { preset: document.getElementById('flangerPreset').value, mixPercent: fval('flangerMix'), rate: fval('flangerRate'), depthMs: fval('flangerDepth'), baseDelayMs: fval('flangerBase'), feedback: fval('flangerFeedback') },
+    echo: { preset: document.getElementById('echoPreset').value, mixPercent: fval('echoMix'), delayMs: fval('echoDelay'), feedback: fval('echoFeedback') }
   };
   const text = JSON.stringify(settings, null, 2);
   navigator.clipboard.writeText(text).then(function(){
@@ -370,10 +358,6 @@ document.getElementById('copyBtn').addEventListener('click', function(){
     btn.textContent = 'Kopiert ✓';
     setTimeout(function(){ btn.textContent = orig; }, 1500);
   });
-});
-
-['fxFlanger','fxEcho'].forEach(function(id){
-  document.getElementById(id).classList.add('disabled');
 });
 </script>
 </body>
