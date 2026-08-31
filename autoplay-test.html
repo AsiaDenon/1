@@ -43,10 +43,14 @@
   <button id="pauseBtn">Pause</button>
 </div>
 <div class="row">
-  <label><input type="checkbox" id="modeRecreate"> Modus B: bei Videoende Player komplett neu erstellen (wie <code>U()</code>/<code>playAutoNext()</code> im Dual Player)</label>
+  <label><input type="radio" name="mode" id="modeA" value="A" checked> Modus A: <code>.playVideo()</code> auf bestehendem Player (Watchdog-Standard)</label>
 </div>
 <div class="row">
-  <label><input type="checkbox" id="modeMuted"> dabei stummgeschaltet laden (Autoplay-Policy-Workaround testen)</label>
+  <label><input type="radio" name="mode" id="modeB" value="B"> Modus B: Player komplett neu erstellen (<code>destroy()</code> + <code>new YT.Player()</code>, wie <code>U()</code>/<code>playAutoNext()</code>)</label>
+  <label style="margin-left:16px"><input type="checkbox" id="modeMuted"> dabei stummgeschaltet laden</label>
+</div>
+<div class="row">
+  <label><input type="radio" name="mode" id="modeC" value="C"> Modus C: <code>loadVideoById()</code> auf bestehendem Player (kein destroy/recreate)</label>
 </div>
 
 <video id="player-placeholder" style="display:none"></video>
@@ -206,8 +210,12 @@ function buildEvents(label){
       if(st === 1) userPaused = false;
       if(st === 0){
         log('state', `★ VIDEO ENDED [${label}] (State 0) empfangen bei hidden=${document.hidden}`);
-        const recreate = document.getElementById('modeRecreate').checked;
-        if(recreate) recreatePlayerAndAutoplay();
+        const mode = document.querySelector('input[name=mode]:checked').value;
+        if(mode === 'B') recreatePlayerAndAutoplay();
+        else if(mode === 'C') loadByIdOnExisting();
+        else {
+          log('state', `Modus A: kein automatischer Wechsel — Watchdog übernimmt beim nächsten Tick (playVideo() auf bestehendem Player)`);
+        }
       }
     },
     onError: function(e){ log('state', `onError [${label}] -> ${e.data}`); }
@@ -240,6 +248,21 @@ function recreatePlayerAndAutoplay(){
     playerVars: { autoplay: 1, controls: 1, playsinline: 1, enablejsapi: 1, mute: muted?1:0, origin: window.location.origin },
     events: buildEvents('recreated')
   });
+}
+
+// Modus C: Video auf dem BESTEHENDEN Player-Objekt wechseln (kein destroy/recreate).
+function loadByIdOnExisting(){
+  const id = extractVideoId(document.getElementById('videoIdInput').value);
+  log('state', `Modus C: loadVideoById(${id}) auf bestehendem Player — hidden=${document.hidden}`);
+  try{
+    player.loadVideoById(id);
+    setTimeout(function(){
+      try{
+        const st = player.getPlayerState();
+        log('state', `[loadVideoById] Statuscheck 2s danach: State=${st} (${STATE_NAMES[st]||'?'}) — ${st===1?'spielt ✓':'spielt NICHT ✗'}`);
+      }catch(e){}
+    }, 2000);
+  }catch(e){ log('state', `Fehler bei loadVideoById: ${e.message}`); }
 }
 
 document.getElementById('loadBtn').addEventListener('click', function(){
