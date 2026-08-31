@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Effekt-Mockup</title>
+<style>
+  :root{--bg:#0f0f0f;--bg2:#1c1c1c;--border:#333;--text:#eee;--text2:#999;--accent:#4caf50}
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,Segoe UI,Roboto,sans-serif;margin:0;padding:16px;font-size:14px;max-width:640px;margin:0 auto}
+  h1{font-size:18px;margin:0 0 4px}
+  .sub{color:var(--text2);margin:0 0 16px;font-size:12px}
+  .source-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+  button{padding:8px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);cursor:pointer;font-size:13px}
+  button:hover{background:#2a2a2a}
+  button.primary{background:#fff;color:#000;border-color:#000}
+  button:disabled{opacity:.35;cursor:not-allowed}
+  canvas{width:100%;height:70px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;display:block;margin-bottom:14px}
+  .fx{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:10px}
+  .fx-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .fx-head label{font-weight:600;font-size:14px;flex:1;display:flex;align-items:center;gap:6px}
+  .fx-head input[type=checkbox]{width:16px;height:16px}
+  .row{display:flex;align-items:center;gap:8px;margin:6px 0}
+  .row label{width:110px;color:var(--text2);font-size:12px;flex-shrink:0}
+  .row input[type=range]{flex:1}
+  .row .val{width:52px;text-align:right;font-variant-numeric:tabular-nums;font-size:12px;color:var(--text2)}
+  .fx.disabled .row{opacity:.35;pointer-events:none}
+  .master{display:flex;align-items:center;gap:8px;margin:12px 0}
+  .master label{width:110px;color:var(--text2);font-size:12px}
+  .footer-row{display:flex;gap:8px;margin-top:6px}
+</style>
+</head>
+<body>
+<h1>🎛️ Effekt-Mockup</h1>
+<p class="sub">Isolierter Testbereich für neue Mixer-Effekte, unabhängig vom Dual Player. Datei laden oder Testton nutzen, Effekte einzeln an/aus schalten und Regler live verstellen. Passende Werte gefunden? Unten als JSON kopieren und mir schicken – dann bauen wir genau das in den Dual Player ein.</p>
+
+<div class="source-row">
+  <input type="file" id="fileInput" accept="audio/*" style="flex:1;min-width:180px">
+  <button id="testToneBtn">🔊 Testton</button>
+  <button id="playPauseBtn" class="primary" disabled>Play</button>
+</div>
+<canvas id="scope" width="600" height="70"></canvas>
+
+<div class="fx" id="fxHpf">
+  <div class="fx-head"><label><input type="checkbox" id="hpfEnabled">HPF (Hochpass – schneidet Bässe ab)</label></div>
+  <div class="row"><label>Grenzfrequenz</label><input type="range" id="hpfFreq" min="20" max="5000" value="200" step="1"><span class="val" id="hpfFreqVal">200 Hz</span></div>
+</div>
+
+<div class="fx" id="fxLpf">
+  <div class="fx-head"><label><input type="checkbox" id="lpfEnabled">LPF (Tiefpass – schneidet Höhen ab)</label></div>
+  <div class="row"><label>Grenzfrequenz</label><input type="range" id="lpfFreq" min="200" max="20000" value="8000" step="10"><span class="val" id="lpfFreqVal">8000 Hz</span></div>
+</div>
+
+<div class="fx" id="fxLfoFilter">
+  <div class="fx-head"><label><input type="checkbox" id="lfoFilterEnabled">LFO-Filter (Auto-Wah, pulsierender Filter)</label></div>
+  <div class="row"><label>Basisfrequenz</label><input type="range" id="lfoFilterBase" min="100" max="8000" value="1000" step="10"><span class="val" id="lfoFilterBaseVal">1000 Hz</span></div>
+  <div class="row"><label>LFO-Rate</label><input type="range" id="lfoFilterRate" min="0.1" max="10" value="1" step="0.1"><span class="val" id="lfoFilterRateVal">1.0 Hz</span></div>
+  <div class="row"><label>Tiefe</label><input type="range" id="lfoFilterDepth" min="0" max="4000" value="800" step="10"><span class="val" id="lfoFilterDepthVal">800 Hz</span></div>
+</div>
+
+<div class="fx" id="fxFlanger">
+  <div class="fx-head"><label><input type="checkbox" id="flangerEnabled">Flanger</label></div>
+  <div class="row"><label>Rate</label><input type="range" id="flangerRate" min="0.05" max="5" value="0.25" step="0.05"><span class="val" id="flangerRateVal">0.25 Hz</span></div>
+  <div class="row"><label>Tiefe</label><input type="range" id="flangerDepth" min="0" max="10" value="3" step="0.1"><span class="val" id="flangerDepthVal">3.0 ms</span></div>
+  <div class="row"><label>Basis-Delay</label><input type="range" id="flangerBase" min="1" max="15" value="5" step="0.5"><span class="val" id="flangerBaseVal">5.0 ms</span></div>
+  <div class="row"><label>Feedback</label><input type="range" id="flangerFeedback" min="0" max="0.9" value="0.5" step="0.01"><span class="val" id="flangerFeedbackVal">50%</span></div>
+  <div class="row"><label>Mix</label><input type="range" id="flangerMix" min="0" max="100" value="50" step="1"><span class="val" id="flangerMixVal">50%</span></div>
+</div>
+
+<div class="fx" id="fxEcho">
+  <div class="fx-head"><label><input type="checkbox" id="echoEnabled">Echo</label></div>
+  <div class="row"><label>Delay-Zeit</label><input type="range" id="echoDelay" min="50" max="1000" value="300" step="10"><span class="val" id="echoDelayVal">300 ms</span></div>
+  <div class="row"><label>Feedback</label><input type="range" id="echoFeedback" min="0" max="0.9" value="0.35" step="0.01"><span class="val" id="echoFeedbackVal">35%</span></div>
+  <div class="row"><label>Mix</label><input type="range" id="echoMix" min="0" max="100" value="35" step="1"><span class="val" id="echoMixVal">35%</span></div>
+</div>
+
+<div class="master">
+  <label>Lautstärke</label><input type="range" id="masterVol" min="0" max="100" value="80" step="1"><span class="val" id="masterVolVal">80%</span>
+</div>
+
+<div class="footer-row">
+  <button id="resetBtn">Alle Effekte aus</button>
+  <button id="copyBtn">Werte als JSON kopieren</button>
+</div>
+
+<script>
+let audioCtx=null, sourceNode=null, sourceAudioEl=null, testOsc=null, masterGain=null, analyser=null;
+let hpfNode=null, lpfNode=null, lfoFilterNode=null, lfoFilterLFO=null, lfoFilterDepthGain=null;
+let flangerNodes=null, echoNodes=null;
+let usingTestTone=false;
+let isPlaying=false;
+
+function ensureCtx(){ if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); return audioCtx; }
+
+function val(id){ return document.getElementById(id).value; }
+function fval(id){ return parseFloat(document.getElementById(id).value); }
+function checked(id){ return document.getElementById(id).checked; }
+
+function stopLFOs(){
+  [lfoFilterLFO, flangerNodes&&flangerNodes.lfo].forEach(function(o){
+    if(o){ try{ o.stop(); }catch(e){} try{ o.disconnect(); }catch(e){} }
+  });
+  lfoFilterLFO = null;
+  if(flangerNodes) flangerNodes.lfo = null;
+}
+
+function rebuildChain(){
+  if(!audioCtx || !sourceNode) return;
+  stopLFOs();
+  try{ sourceNode.disconnect(); }catch(e){}
+  try{ if(hpfNode) hpfNode.disconnect(); }catch(e){}
+  try{ if(lpfNode) lpfNode.disconnect(); }catch(e){}
+  try{ if(lfoFilterNode) lfoFilterNode.disconnect(); }catch(e){}
+  try{ if(flangerNodes){ Object.values(flangerNodes).forEach(function(n){ if(n&&n.disconnect) try{n.disconnect();}catch(e){} }); } }catch(e){}
+  try{ if(echoNodes){ Object.values(echoNodes).forEach(function(n){ if(n&&n.disconnect) try{n.disconnect();}catch(e){} }); } }catch(e){}
+
+  let node = sourceNode;
+
+  if(checked('hpfEnabled')){
+    hpfNode = audioCtx.createBiquadFilter();
+    hpfNode.type = 'highpass';
+    hpfNode.frequency.value = fval('hpfFreq');
+    node.connect(hpfNode); node = hpfNode;
+  } else { hpfNode = null; }
+
+  if(checked('lpfEnabled')){
+    lpfNode = audioCtx.createBiquadFilter();
+    lpfNode.type = 'lowpass';
+    lpfNode.frequency.value = fval('lpfFreq');
+    node.connect(lpfNode); node = lpfNode;
+  } else { lpfNode = null; }
+
+  if(checked('lfoFilterEnabled')){
+    lfoFilterNode = audioCtx.createBiquadFilter();
+    lfoFilterNode.type = 'lowpass';
+    lfoFilterNode.frequency.value = fval('lfoFilterBase');
+    lfoFilterLFO = audioCtx.createOscillator();
+    lfoFilterLFO.frequency.value = fval('lfoFilterRate');
+    lfoFilterDepthGain = audioCtx.createGain();
+    lfoFilterDepthGain.gain.value = fval('lfoFilterDepth');
+    lfoFilterLFO.connect(lfoFilterDepthGain);
+    lfoFilterDepthGain.connect(lfoFilterNode.frequency);
+    lfoFilterLFO.start();
+    node.connect(lfoFilterNode); node = lfoFilterNode;
+  } else { lfoFilterNode = null; }
+
+  if(checked('flangerEnabled')){
+    const input = node;
+    const dry = audioCtx.createGain(); dry.gain.value = 1 - fval('flangerMix')/100;
+    const wet = audioCtx.createGain(); wet.gain.value = fval('flangerMix')/100;
+    const delay = audioCtx.createDelay(0.05); delay.delayTime.value = fval('flangerBase')/1000;
+    const lfo = audioCtx.createOscillator(); lfo.frequency.value = fval('flangerRate');
+    const depthGain = audioCtx.createGain(); depthGain.gain.value = fval('flangerDepth')/1000;
+    const feedback = audioCtx.createGain(); feedback.gain.value = fval('flangerFeedback');
+    const merge = audioCtx.createGain();
+    lfo.connect(depthGain); depthGain.connect(delay.delayTime);
+    input.connect(dry); dry.connect(merge);
+    input.connect(delay); delay.connect(feedback); feedback.connect(delay); delay.connect(wet); wet.connect(merge);
+    lfo.start();
+    flangerNodes = {dry:dry, wet:wet, delay:delay, lfo:lfo, depthGain:depthGain, feedback:feedback, merge:merge};
+    node = merge;
+  } else { flangerNodes = null; }
+
+  if(checked('echoEnabled')){
+    const input = node;
+    const dry = audioCtx.createGain(); dry.gain.value = 1 - fval('echoMix')/100;
+    const wet = audioCtx.createGain(); wet.gain.value = fval('echoMix')/100;
+    const delay = audioCtx.createDelay(2); delay.delayTime.value = fval('echoDelay')/1000;
+    const feedback = audioCtx.createGain(); feedback.gain.value = fval('echoFeedback');
+    const merge = audioCtx.createGain();
+    input.connect(dry); dry.connect(merge);
+    input.connect(delay); delay.connect(feedback); feedback.connect(delay); delay.connect(wet); wet.connect(merge);
+    echoNodes = {dry:dry, wet:wet, delay:delay, feedback:feedback, merge:merge};
+    node = merge;
+  } else { echoNodes = null; }
+
+  node.connect(masterGain);
+}
+
+function setSource(newSourceNode){
+  if(sourceNode){ try{ sourceNode.disconnect(); }catch(e){} }
+  sourceNode = newSourceNode;
+  rebuildChain();
+}
+
+function initMasterAndScope(){
+  if(masterGain) return;
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = fval('masterVol')/100;
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 1024;
+  masterGain.connect(analyser);
+  analyser.connect(audioCtx.destination);
+  drawScope();
+}
+
+function drawScope(){
+  const canvas = document.getElementById('scope');
+  const ctx2d = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  const data = new Uint8Array(analyser ? analyser.fftSize : 1024);
+  function frame(){
+    requestAnimationFrame(frame);
+    ctx2d.fillStyle = '#1c1c1c';
+    ctx2d.fillRect(0,0,w,h);
+    if(!analyser) return;
+    analyser.getByteTimeDomainData(data);
+    ctx2d.strokeStyle = '#4caf50';
+    ctx2d.lineWidth = 2;
+    ctx2d.beginPath();
+    const slice = w / data.length;
+    let x = 0;
+    for(let i=0;i<data.length;i++){
+      const y = (data[i]/255) * h;
+      i===0 ? ctx2d.moveTo(x,y) : ctx2d.lineTo(x,y);
+      x += slice;
+    }
+    ctx2d.stroke();
+  }
+  frame();
+}
+
+// --- Quelle: Datei ---
+document.getElementById('fileInput').addEventListener('change', function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  ensureCtx();
+  initMasterAndScope();
+  if(sourceAudioEl){ sourceAudioEl.pause(); sourceAudioEl.src=''; }
+  sourceAudioEl = new Audio();
+  sourceAudioEl.src = URL.createObjectURL(file);
+  sourceAudioEl.loop = true;
+  usingTestTone = false;
+  if(testOsc){ try{testOsc.stop();}catch(e){} testOsc=null; }
+  const srcNode = audioCtx.createMediaElementSource(sourceAudioEl);
+  setSource(srcNode);
+  sourceAudioEl.play();
+  isPlaying = true;
+  document.getElementById('playPauseBtn').disabled = false;
+  document.getElementById('playPauseBtn').textContent = 'Pause';
+});
+
+// --- Quelle: Testton ---
+document.getElementById('testToneBtn').addEventListener('click', function(){
+  ensureCtx();
+  initMasterAndScope();
+  if(sourceAudioEl){ sourceAudioEl.pause(); }
+  if(testOsc){ try{testOsc.stop();}catch(e){} }
+  usingTestTone = true;
+  testOsc = audioCtx.createOscillator();
+  testOsc.type = 'sawtooth';
+  testOsc.frequency.value = 220;
+  const toneGain = audioCtx.createGain();
+  toneGain.gain.value = 0.3;
+  testOsc.connect(toneGain);
+  testOsc.start();
+  setSource(toneGain);
+  isPlaying = true;
+  document.getElementById('playPauseBtn').disabled = false;
+  document.getElementById('playPauseBtn').textContent = 'Pause';
+});
+
+document.getElementById('playPauseBtn').addEventListener('click', function(){
+  if(usingTestTone){
+    if(isPlaying){ audioCtx.suspend(); isPlaying=false; this.textContent='Play'; }
+    else { audioCtx.resume(); isPlaying=true; this.textContent='Pause'; }
+  } else if(sourceAudioEl){
+    if(isPlaying){ sourceAudioEl.pause(); isPlaying=false; this.textContent='Play'; }
+    else { sourceAudioEl.play(); isPlaying=true; this.textContent='Pause'; }
+  }
+});
+
+// --- Effekt an/aus: löst rebuildChain() aus ---
+['hpfEnabled','lpfEnabled','lfoFilterEnabled','flangerEnabled','echoEnabled'].forEach(function(id){
+  document.getElementById(id).addEventListener('change', function(){
+    document.getElementById('fx' + id.charAt(0).toUpperCase() + id.slice(1).replace('Enabled','')).classList.toggle('disabled', !this.checked);
+    rebuildChain();
+  });
+});
+
+// --- Live-Regler: nur Werte updaten, kein Rebuild (kein Knacksen) ---
+function liveSlider(sliderId, labelId, suffix, apply){
+  const el = document.getElementById(sliderId);
+  const lbl = document.getElementById(labelId);
+  function update(){
+    const v = fval(sliderId);
+    lbl.textContent = (Number.isInteger(v) ? v : v.toFixed(v<10?2:0)) + suffix;
+    apply(v);
+  }
+  el.addEventListener('input', update);
+  update();
+}
+liveSlider('hpfFreq','hpfFreqVal',' Hz', function(v){ if(hpfNode) hpfNode.frequency.value = v; });
+liveSlider('lpfFreq','lpfFreqVal',' Hz', function(v){ if(lpfNode) lpfNode.frequency.value = v; });
+liveSlider('lfoFilterBase','lfoFilterBaseVal',' Hz', function(v){ if(lfoFilterNode) lfoFilterNode.frequency.value = v; });
+liveSlider('lfoFilterRate','lfoFilterRateVal',' Hz', function(v){ if(lfoFilterLFO) lfoFilterLFO.frequency.value = v; });
+liveSlider('lfoFilterDepth','lfoFilterDepthVal',' Hz', function(v){ if(lfoFilterDepthGain) lfoFilterDepthGain.gain.value = v; });
+liveSlider('flangerRate','flangerRateVal',' Hz', function(v){ if(flangerNodes) flangerNodes.lfo.frequency.value = v; });
+liveSlider('flangerDepth','flangerDepthVal',' ms', function(v){ if(flangerNodes) flangerNodes.depthGain.gain.value = v/1000; });
+liveSlider('flangerBase','flangerBaseVal',' ms', function(v){ if(flangerNodes) flangerNodes.delay.delayTime.value = v/1000; });
+liveSlider('flangerFeedback','flangerFeedbackVal','%', function(v){ if(flangerNodes) flangerNodes.feedback.gain.value = v; document.getElementById('flangerFeedbackVal').textContent = Math.round(v*100)+'%'; });
+liveSlider('flangerMix','flangerMixVal','%', function(v){ if(flangerNodes){ flangerNodes.dry.gain.value = 1-v/100; flangerNodes.wet.gain.value = v/100; } });
+liveSlider('echoDelay','echoDelayVal',' ms', function(v){ if(echoNodes) echoNodes.delay.delayTime.value = v/1000; });
+liveSlider('echoFeedback','echoFeedbackVal','%', function(v){ if(echoNodes) echoNodes.feedback.gain.value = v; document.getElementById('echoFeedbackVal').textContent = Math.round(v*100)+'%'; });
+liveSlider('echoMix','echoMixVal','%', function(v){ if(echoNodes){ echoNodes.dry.gain.value = 1-v/100; echoNodes.wet.gain.value = v/100; } });
+liveSlider('masterVol','masterVolVal','%', function(v){ if(masterGain) masterGain.gain.value = v/100; });
+
+document.getElementById('resetBtn').addEventListener('click', function(){
+  ['hpfEnabled','lpfEnabled','lfoFilterEnabled','flangerEnabled','echoEnabled'].forEach(function(id){
+    document.getElementById(id).checked = false;
+    document.getElementById('fx' + id.charAt(0).toUpperCase() + id.slice(1).replace('Enabled','')).classList.add('disabled');
+  });
+  rebuildChain();
+});
+
+document.getElementById('copyBtn').addEventListener('click', function(){
+  const settings = {
+    hpf: { enabled: checked('hpfEnabled'), freq: fval('hpfFreq') },
+    lpf: { enabled: checked('lpfEnabled'), freq: fval('lpfFreq') },
+    lfoFilter: { enabled: checked('lfoFilterEnabled'), baseFreq: fval('lfoFilterBase'), rate: fval('lfoFilterRate'), depth: fval('lfoFilterDepth') },
+    flanger: { enabled: checked('flangerEnabled'), rate: fval('flangerRate'), depthMs: fval('flangerDepth'), baseDelayMs: fval('flangerBase'), feedback: fval('flangerFeedback'), mixPercent: fval('flangerMix') },
+    echo: { enabled: checked('echoEnabled'), delayMs: fval('echoDelay'), feedback: fval('echoFeedback'), mixPercent: fval('echoMix') }
+  };
+  const text = JSON.stringify(settings, null, 2);
+  navigator.clipboard.writeText(text).then(function(){
+    const btn = document.getElementById('copyBtn');
+    const orig = btn.textContent;
+    btn.textContent = 'Kopiert ✓';
+    setTimeout(function(){ btn.textContent = orig; }, 1500);
+  });
+});
+
+// Anfangszustand: alle Effekt-Boxen visuell deaktiviert
+['fxHpf','fxLpf','fxLfoFilter','fxFlanger','fxEcho'].forEach(function(id){
+  document.getElementById(id).classList.add('disabled');
+});
+</script>
+</body>
+</html>
