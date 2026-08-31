@@ -9,12 +9,15 @@
   *{box-sizing:border-box}
   body{background:var(--bg);color:var(--text);font-family:-apple-system,Segoe UI,Roboto,sans-serif;margin:0;padding:16px;font-size:14px;max-width:640px;margin:0 auto}
   h1{font-size:18px;margin:0 0 4px}
+  h2.section{font-size:14px;color:var(--text2);margin:22px 0 8px;border-top:1px solid var(--border);padding-top:16px}
   .sub{color:var(--text2);margin:0 0 16px;font-size:12px}
   .source-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
   button{padding:8px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);cursor:pointer;font-size:13px}
   button:hover{background:#2a2a2a}
   button.primary{background:#fff;color:#000;border-color:#000}
   button:disabled{opacity:.35;cursor:not-allowed}
+  button.trigger-btn{width:100%;padding:14px;font-size:14px;font-weight:600;user-select:none;-webkit-user-select:none;touch-action:none}
+  button.trigger-btn.active{background:var(--accent);color:#000;border-color:var(--accent)}
   select{padding:6px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px}
   canvas{width:100%;height:70px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;display:block;margin-bottom:14px}
   .fx{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:10px}
@@ -29,6 +32,8 @@
   .row input[type=range]{flex:1}
   .row .val{width:80px;text-align:right;font-variant-numeric:tabular-nums;font-size:12px;color:var(--text2)}
   .row.mix-row .val{color:var(--accent);font-weight:600}
+  .trigger-row{display:flex;gap:8px}
+  .trigger-row .fx{flex:1;display:flex;flex-direction:column;justify-content:space-between}
   .master{display:flex;align-items:center;gap:8px;margin:12px 0}
   .master label{width:110px;color:var(--text2);font-size:12px}
   .footer-row{display:flex;gap:8px;margin-top:6px}
@@ -36,7 +41,7 @@
 </head>
 <body>
 <h1>🎛️ Effekt-Mockup</h1>
-<p class="sub">Isolierter Testbereich für neue Mixer-Effekte, unabhängig vom Dual Player. Datei laden oder Testton nutzen, Regler live verstellen. Bei allen Effekten gilt: Grundstellung (Mitte bzw. 0%) = komplett unhörbar, du blendest den Effekt selbst über den jeweiligen Hauptregler ein. Passende Werte gefunden? Unten als JSON kopieren und mir schicken.</p>
+<p class="sub">Isolierter Testbereich, unabhängig vom Dual Player. Regel-Effekte: Grundstellung (Mitte/0%) = unhörbar, du blendest selbst ein. Trigger-Effekte unten: per Knopf auslösen, wie am DJ-Pult. Werte gut? Unten als JSON kopieren.</p>
 
 <div class="source-row">
   <input type="file" id="fileInput" accept="audio/*" style="flex:1;min-width:180px">
@@ -51,9 +56,25 @@
   <div class="row"><label>Position</label><input type="range" id="filterSlider" min="-100" max="100" value="0" step="1"><span class="val" id="filterSliderVal">Aus</span></div>
 </div>
 
+<div class="fx" id="fxDist">
+  <div class="fx-head"><label>Verzerrung / Bitcrusher</label></div>
+  <p class="fx-hint">Vereinfachte Variante über Verzerrungskurve (kein echtes Bit-Reduzieren, klingt aber ähnlich kaputt)</p>
+  <div class="row mix-row"><label>Mix</label><input type="range" id="distMix" min="0" max="100" value="0" step="1"><span class="val" id="distMixVal">0% (aus)</span></div>
+  <div class="row"><label>Amount</label><input type="range" id="distAmount" min="1" max="100" value="40" step="1"><span class="val" id="distAmountVal">40</span></div>
+</div>
+
+<div class="fx" id="fxPhaser">
+  <div class="fx-head"><label>Phaser</label></div>
+  <p class="fx-hint">Ähnlich wie Flanger, aber weicher/whooshiger statt metallisch</p>
+  <div class="row mix-row"><label>Mix</label><input type="range" id="phaserMix" min="0" max="100" value="0" step="1"><span class="val" id="phaserMixVal">0% (aus)</span></div>
+  <div class="row"><label>Rate</label><input type="range" id="phaserRate" min="0.05" max="5" value="0.4" step="0.05"><span class="val" id="phaserRateVal">0.40 Hz</span></div>
+  <div class="row"><label>Tiefe</label><input type="range" id="phaserDepth" min="0" max="2000" value="800" step="10"><span class="val" id="phaserDepthVal">800 Hz</span></div>
+  <div class="row"><label>Feedback</label><input type="range" id="phaserFeedback" min="0" max="0.9" value="0.3" step="0.01"><span class="val" id="phaserFeedbackVal">30%</span></div>
+</div>
+
 <div class="fx" id="fxFlanger">
   <div class="fx-head"><label>Flanger</label></div>
-  <p class="fx-hint">Mix bei 0% = kompletter Nullpunkt, unhörbar. Das ist dein Ein/Aus-Regler.</p>
+  <p class="fx-hint">Mix bei 0% = kompletter Nullpunkt</p>
   <div class="preset-row"><label>Preset</label><select id="flangerPreset">
     <option value="custom">Eigene Werte</option>
     <option value="subtle">Sanft</option>
@@ -68,9 +89,23 @@
   <div class="row"><label>Feedback</label><input type="range" id="flangerFeedback" min="0" max="0.9" value="0.5" step="0.01"><span class="val" id="flangerFeedbackVal">50%</span></div>
 </div>
 
+<div class="fx" id="fxGate">
+  <div class="fx-head"><label>Trance Gate</label></div>
+  <p class="fx-hint">Zerhackt die Lautstärke rhythmisch. Tiefe bei 0% = Nullpunkt</p>
+  <div class="row mix-row"><label>Tiefe</label><input type="range" id="gateDepth" min="0" max="100" value="0" step="1"><span class="val" id="gateDepthVal">0% (aus)</span></div>
+  <div class="row"><label>Rate</label><input type="range" id="gateRate" min="1" max="20" value="8" step="0.5"><span class="val" id="gateRateVal">8.0 Hz</span></div>
+</div>
+
+<div class="fx" id="fxPan">
+  <div class="fx-head"><label>Autopan</label></div>
+  <p class="fx-hint">Wandert rhythmisch zwischen links/rechts. Tiefe bei 0% = Nullpunkt (Mitte)</p>
+  <div class="row mix-row"><label>Tiefe</label><input type="range" id="panDepth" min="0" max="100" value="0" step="1"><span class="val" id="panDepthVal">0% (aus)</span></div>
+  <div class="row"><label>Rate</label><input type="range" id="panRate" min="0.1" max="8" value="1" step="0.1"><span class="val" id="panRateVal">1.0 Hz</span></div>
+</div>
+
 <div class="fx" id="fxEcho">
   <div class="fx-head"><label>Echo</label></div>
-  <p class="fx-hint">Mix bei 0% = kompletter Nullpunkt, unhörbar. Das ist dein Ein/Aus-Regler.</p>
+  <p class="fx-hint">Mix bei 0% = kompletter Nullpunkt</p>
   <div class="preset-row"><label>Preset</label><select id="echoPreset">
     <option value="custom">Eigene Werte</option>
     <option value="slapback">Slapback (kurz, knackig)</option>
@@ -84,22 +119,66 @@
   <div class="row"><label>Feedback</label><input type="range" id="echoFeedback" min="0" max="0.9" value="0.35" step="0.01"><span class="val" id="echoFeedbackVal">35%</span></div>
 </div>
 
+<div class="fx" id="fxReverb">
+  <div class="fx-head"><label>Reverb (Hall)</label></div>
+  <p class="fx-hint">Mix bei 0% = kompletter Nullpunkt</p>
+  <div class="row mix-row"><label>Mix</label><input type="range" id="reverbMix" min="0" max="100" value="0" step="1"><span class="val" id="reverbMixVal">0% (aus)</span></div>
+  <div class="row"><label>Länge</label><input type="range" id="reverbDecay" min="0.5" max="5" value="2" step="0.1"><span class="val" id="reverbDecayVal">2.0 s</span></div>
+</div>
+
+<h2 class="section">🎬 Performance-Effekte (Knopf gedrückt halten bzw. klicken)</h2>
+
+<div class="trigger-row">
+  <div class="fx">
+    <div class="fx-head"><label>Beat Roll / Stutter</label></div>
+    <p class="fx-hint">Gedrückt halten = Loop des letzten Stücks</p>
+    <div class="row"><label>Loop-Länge</label><input type="range" id="stutterLength" min="50" max="500" value="150" step="10"><span class="val" id="stutterLengthVal">150 ms</span></div>
+    <div class="row"><label>Feedback</label><input type="range" id="stutterFeedback" min="0.5" max="0.99" value="0.9" step="0.01"><span class="val" id="stutterFeedbackVal">90%</span></div>
+    <button class="trigger-btn" id="stutterBtn" disabled>🔁 Halten zum Rollen</button>
+  </div>
+</div>
+
+<div class="trigger-row">
+  <div class="fx">
+    <div class="fx-head"><label>Vinyl-Bremse</label></div>
+    <p class="fx-hint">Bremst wie ein Plattenspieler aus</p>
+    <div class="row"><label>Dauer</label><input type="range" id="spinbackDuration" min="0.5" max="4" value="1.5" step="0.1"><span class="val" id="spinbackDurationVal">1.5 s</span></div>
+    <button class="trigger-btn" id="spinbackBtn" disabled>🎚️ Bremse auslösen</button>
+    <button id="spinbackResetBtn" style="margin-top:6px;width:100%" disabled>↺ Zurücksetzen</button>
+  </div>
+</div>
+
+<div class="trigger-row">
+  <div class="fx">
+    <div class="fx-head"><label>Reverse</label></div>
+    <p class="fx-hint">Spielt den letzten Ausschnitt einmal rückwärts ab (nur bei geladener Datei)</p>
+    <div class="row"><label>Ausschnitt</label><input type="range" id="reverseLength" min="0.3" max="3" value="1" step="0.1"><span class="val" id="reverseLengthVal">1.0 s</span></div>
+    <button class="trigger-btn" id="reverseBtn" disabled>⏪ Rückwärts abspielen</button>
+  </div>
+</div>
+
+<h2 class="section">Gesamt</h2>
 <div class="master">
   <label>Lautstärke</label><input type="range" id="masterVol" min="0" max="100" value="80" step="1"><span class="val" id="masterVolVal">80%</span>
 </div>
 
 <div class="footer-row">
-  <button id="resetBtn">Alle Effekte auf 0</button>
+  <button id="resetBtn">Alle Regel-Effekte auf 0</button>
   <button id="copyBtn">Werte als JSON kopieren</button>
 </div>
 
 <script>
 let audioCtx=null, sourceNode=null, sourceAudioEl=null, testOsc=null, masterGain=null, analyser=null;
-let filterNode=null;
-let flangerNodes=null, echoNodes=null;
+let filterNode=null, distNode=null, phaserStages=null, phaserLFO=null, phaserDepthGain=null, phaserFeedbackGain=null, phaserDryWet=null;
+let flangerNodes=null, gateGain=null, gateLFO=null, gateShaper=null, gateDepthGain=null;
+let panNode=null, panLFO=null, panDepthGain=null;
+let echoNodes=null, reverbNode=null, reverbDryWet=null;
+let dryGain=null, stutterWet=null, stutterDelay=null, stutterFeedbackGain=null;
+let decodedBuffer=null;
 let usingTestTone=false;
 let isPlaying=false;
 let applyingPreset=false;
+let spinbackRAF=null;
 
 const FLANGER_PRESETS = {
   subtle:     { rate:0.2,  depth:1.5, base:3,  feedback:0.2, mix:25 },
@@ -119,34 +198,89 @@ function ensureCtx(){ if(!audioCtx) audioCtx = new (window.AudioContext||window.
 function fval(id){ return parseFloat(document.getElementById(id).value); }
 
 function combinedFilterParams(v){
-  if(v < -0.5){
-    var t = Math.min(1, Math.abs(v)/100);
-    return { type:'highpass', freq: 20 + t*t*(5000-20) };
-  } else if(v > 0.5){
-    var t = Math.min(1, v/100);
-    return { type:'lowpass', freq: 20000 - t*t*(20000-200) };
-  }
-  return { type:'allpass', freq: 1000 };
+  if(v < -0.5){ var t=Math.min(1,Math.abs(v)/100); return {type:'highpass',freq:20+t*t*(5000-20)}; }
+  if(v > 0.5){ var t=Math.min(1,v/100); return {type:'lowpass',freq:20000-t*t*(20000-200)}; }
+  return {type:'allpass',freq:1000};
 }
 
-// Baut die Kette EINMAL vollständig auf (bei jeder neuen Quelle). Flanger/Echo sind danach
-// dauerhaft im Signalpfad; Mix=0 macht sie unhörbar, ohne dass neu verkabelt werden muss.
+function makeDistortionCurve(amount){
+  var k = amount, n = 4096, curve = new Float32Array(n), deg = Math.PI/180;
+  for(var i=0;i<n;i++){
+    var x = i*2/n - 1;
+    curve[i] = (3+k)*x*20*deg / (Math.PI + k*Math.abs(x));
+  }
+  return curve;
+}
+
+function makeImpulseResponse(ctx, duration){
+  var rate = ctx.sampleRate, length = Math.max(1, Math.floor(rate*duration));
+  var impulse = ctx.createBuffer(2, length, rate);
+  for(var ch=0; ch<2; ch++){
+    var data = impulse.getChannelData(ch);
+    for(var i=0;i<length;i++) data[i] = (Math.random()*2-1) * Math.pow(1 - i/length, 2);
+  }
+  return impulse;
+}
+
+// Baut die komplette Kette EINMAL auf (bei jeder neuen Quelle). Alle Regel-Effekte bleiben
+// danach dauerhaft verkabelt; Mix/Tiefe = 0 macht sie unhoerbar, ohne Neuaufbau.
 function rebuildChain(){
   if(!audioCtx || !sourceNode) return;
-  if(flangerNodes && flangerNodes.lfo){ try{ flangerNodes.lfo.stop(); }catch(e){} try{ flangerNodes.lfo.disconnect(); }catch(e){} }
-  try{ sourceNode.disconnect(); }catch(e){}
-  try{ if(filterNode) filterNode.disconnect(); }catch(e){}
-  try{ if(flangerNodes){ Object.values(flangerNodes).forEach(function(n){ if(n&&n.disconnect) try{n.disconnect();}catch(e){} }); } }catch(e){}
-  try{ if(echoNodes){ Object.values(echoNodes).forEach(function(n){ if(n&&n.disconnect) try{n.disconnect();}catch(e){} }); } }catch(e){}
+  [flangerNodes&&flangerNodes.lfo, phaserLFO, gateLFO, panLFO].forEach(function(o){
+    if(o){ try{o.stop();}catch(e){} try{o.disconnect();}catch(e){} }
+  });
+  [sourceNode, filterNode, distNode, phaserFeedbackGain, flangerNodes, gateGain, panNode, echoNodes, reverbNode, dryGain, stutterWet].forEach(function(n){
+    if(!n) return;
+    if(n.disconnect) try{n.disconnect();}catch(e){}
+    if(typeof n === 'object' && !n.disconnect) Object.values(n).forEach(function(x){ if(x&&x.disconnect) try{x.disconnect();}catch(e){} });
+  });
+  if(phaserStages) phaserStages.forEach(function(s){ try{s.disconnect();}catch(e){} });
 
   let node = sourceNode;
 
+  // Filter
   filterNode = audioCtx.createBiquadFilter();
   var fp = combinedFilterParams(fval('filterSlider'));
-  filterNode.type = fp.type;
-  filterNode.frequency.value = fp.freq;
+  filterNode.type = fp.type; filterNode.frequency.value = fp.freq;
   node.connect(filterNode); node = filterNode;
 
+  // Verzerrung/Bitcrusher (dry/wet)
+  {
+    const input = node;
+    const shaper = audioCtx.createWaveShaper();
+    shaper.curve = makeDistortionCurve(fval('distAmount'));
+    shaper.oversample = '4x';
+    const dry = audioCtx.createGain(); dry.gain.value = 1 - fval('distMix')/100;
+    const wet = audioCtx.createGain(); wet.gain.value = fval('distMix')/100;
+    const merge = audioCtx.createGain();
+    input.connect(dry); dry.connect(merge);
+    input.connect(shaper); shaper.connect(wet); wet.connect(merge);
+    distNode = { shaper:shaper, dry:dry, wet:wet, merge:merge };
+    node = merge;
+  }
+
+  // Phaser: 4 Allpass-Stufen + LFO-Modulation + Feedback
+  {
+    const input = node;
+    const stages = [200,400,800,1600].map(function(f){ const s=audioCtx.createBiquadFilter(); s.type='allpass'; s.frequency.value=f; return s; });
+    for(let i=0;i<stages.length-1;i++) stages[i].connect(stages[i+1]);
+    phaserLFO = audioCtx.createOscillator(); phaserLFO.frequency.value = fval('phaserRate');
+    phaserDepthGain = audioCtx.createGain(); phaserDepthGain.gain.value = fval('phaserDepth');
+    stages.forEach(function(s){ phaserLFO.connect(phaserDepthGain); phaserDepthGain.connect(s.frequency); });
+    phaserFeedbackGain = audioCtx.createGain(); phaserFeedbackGain.gain.value = fval('phaserFeedback');
+    stages[stages.length-1].connect(phaserFeedbackGain); phaserFeedbackGain.connect(stages[0]);
+    const dry = audioCtx.createGain(); dry.gain.value = 1 - fval('phaserMix')/100;
+    const wet = audioCtx.createGain(); wet.gain.value = fval('phaserMix')/100;
+    const merge = audioCtx.createGain();
+    input.connect(dry); dry.connect(merge);
+    input.connect(stages[0]); stages[stages.length-1].connect(wet); wet.connect(merge);
+    phaserLFO.start();
+    phaserStages = stages;
+    phaserDryWet = { dry:dry, wet:wet, merge:merge };
+    node = merge;
+  }
+
+  // Flanger
   {
     const input = node;
     const dry = audioCtx.createGain(); dry.gain.value = 1 - fval('flangerMix')/100;
@@ -164,6 +298,29 @@ function rebuildChain(){
     node = merge;
   }
 
+  // Trance Gate: LFO -> Rectifier -> depthGain -> gateGain.gain (AudioParam-Modulation)
+  {
+    gateGain = audioCtx.createGain();
+    gateGain.gain.value = 1 - fval('gateDepth')/100;
+    gateLFO = audioCtx.createOscillator(); gateLFO.type='square'; gateLFO.frequency.value = fval('gateRate');
+    gateShaper = audioCtx.createWaveShaper(); gateShaper.curve = Float32Array.from([0,1]);
+    gateDepthGain = audioCtx.createGain(); gateDepthGain.gain.value = fval('gateDepth')/100;
+    gateLFO.connect(gateShaper); gateShaper.connect(gateDepthGain); gateDepthGain.connect(gateGain.gain);
+    gateLFO.start();
+    node.connect(gateGain); node = gateGain;
+  }
+
+  // Autopan: LFO -> depthGain -> panNode.pan (AudioParam-Modulation)
+  {
+    panNode = audioCtx.createStereoPanner ? audioCtx.createStereoPanner() : audioCtx.createGain();
+    panLFO = audioCtx.createOscillator(); panLFO.frequency.value = fval('panRate');
+    panDepthGain = audioCtx.createGain(); panDepthGain.gain.value = fval('panDepth')/100;
+    if(panNode.pan){ panLFO.connect(panDepthGain); panDepthGain.connect(panNode.pan); }
+    panLFO.start();
+    node.connect(panNode); node = panNode;
+  }
+
+  // Echo
   {
     const input = node;
     const dry = audioCtx.createGain(); dry.gain.value = 1 - fval('echoMix')/100;
@@ -177,7 +334,35 @@ function rebuildChain(){
     node = merge;
   }
 
-  node.connect(masterGain);
+  // Reverb (Convolver mit synthetischer Impulsantwort)
+  {
+    const input = node;
+    reverbNode = audioCtx.createConvolver();
+    reverbNode.buffer = makeImpulseResponse(audioCtx, fval('reverbDecay'));
+    const dry = audioCtx.createGain(); dry.gain.value = 1 - fval('reverbMix')/100;
+    const wet = audioCtx.createGain(); wet.gain.value = fval('reverbMix')/100;
+    const merge = audioCtx.createGain();
+    input.connect(dry); dry.connect(merge);
+    input.connect(reverbNode); reverbNode.connect(wet); wet.connect(merge);
+    reverbDryWet = { dry:dry, wet:wet, merge:merge };
+    node = merge;
+  }
+
+  // Beat-Roll/Stutter: paralleler Delay-Loop, per Trigger-Crossfade eingeblendet
+  {
+    const input = node;
+    dryGain = audioCtx.createGain(); dryGain.gain.value = 1;
+    stutterDelay = audioCtx.createDelay(1); stutterDelay.delayTime.value = fval('stutterLength')/1000;
+    stutterFeedbackGain = audioCtx.createGain(); stutterFeedbackGain.gain.value = fval('stutterFeedback');
+    stutterWet = audioCtx.createGain(); stutterWet.gain.value = 0;
+    input.connect(dryGain);
+    input.connect(stutterDelay); stutterDelay.connect(stutterFeedbackGain); stutterFeedbackGain.connect(stutterDelay);
+    stutterDelay.connect(stutterWet);
+    node = { dry:dryGain, wet:stutterWet };
+  }
+
+  dryGain.connect(masterGain);
+  stutterWet.connect(masterGain);
 }
 
 function setSource(newSourceNode){
@@ -240,6 +425,14 @@ document.getElementById('fileInput').addEventListener('change', function(e){
   isPlaying = true;
   document.getElementById('playPauseBtn').disabled = false;
   document.getElementById('playPauseBtn').textContent = 'Pause';
+  document.getElementById('stutterBtn').disabled = false;
+  document.getElementById('spinbackBtn').disabled = false;
+  document.getElementById('spinbackResetBtn').disabled = false;
+  document.getElementById('reverseBtn').disabled = true;
+  file.arrayBuffer().then(function(buf){ return audioCtx.decodeAudioData(buf); }).then(function(buf){
+    decodedBuffer = buf;
+    document.getElementById('reverseBtn').disabled = false;
+  }).catch(function(){ decodedBuffer = null; });
 });
 
 document.getElementById('testToneBtn').addEventListener('click', function(){
@@ -248,6 +441,7 @@ document.getElementById('testToneBtn').addEventListener('click', function(){
   if(sourceAudioEl){ sourceAudioEl.pause(); }
   if(testOsc){ try{testOsc.stop();}catch(e){} }
   usingTestTone = true;
+  decodedBuffer = null;
   testOsc = audioCtx.createOscillator();
   testOsc.type = 'sawtooth';
   testOsc.frequency.value = 220;
@@ -259,6 +453,10 @@ document.getElementById('testToneBtn').addEventListener('click', function(){
   isPlaying = true;
   document.getElementById('playPauseBtn').disabled = false;
   document.getElementById('playPauseBtn').textContent = 'Pause';
+  document.getElementById('stutterBtn').disabled = false;
+  document.getElementById('spinbackBtn').disabled = false;
+  document.getElementById('spinbackResetBtn').disabled = false;
+  document.getElementById('reverseBtn').disabled = true;
 });
 
 document.getElementById('playPauseBtn').addEventListener('click', function(){
@@ -298,15 +496,39 @@ document.getElementById('filterSlider').addEventListener('input', function(){
   if(filterNode){ filterNode.type = fp.type; filterNode.frequency.value = fp.freq; }
 });
 
+liveSlider('distMix','distMixVal','%', function(v){ if(distNode){ distNode.dry.gain.value=1-v/100; distNode.wet.gain.value=v/100; } }, true);
+liveSlider('distAmount','distAmountVal','', function(v){ if(distNode && audioCtx) distNode.shaper.curve = makeDistortionCurve(v); });
+
+liveSlider('phaserMix','phaserMixVal','%', function(v){ if(phaserDryWet){ phaserDryWet.dry.gain.value=1-v/100; phaserDryWet.wet.gain.value=v/100; } }, true);
+liveSlider('phaserRate','phaserRateVal',' Hz', function(v){ if(phaserLFO) phaserLFO.frequency.value=v; });
+liveSlider('phaserDepth','phaserDepthVal',' Hz', function(v){ if(phaserDepthGain) phaserDepthGain.gain.value=v; });
+liveSlider('phaserFeedback','phaserFeedbackVal','%', function(v){ if(phaserFeedbackGain) phaserFeedbackGain.gain.value=v; document.getElementById('phaserFeedbackVal').textContent=Math.round(v*100)+'%'; });
+
 liveSlider('flangerMix','flangerMixVal','%', function(v){ if(flangerNodes){ flangerNodes.dry.gain.value = 1-v/100; flangerNodes.wet.gain.value = v/100; } }, true);
 liveSlider('flangerRate','flangerRateVal',' Hz', function(v){ if(flangerNodes) flangerNodes.lfo.frequency.value = v; });
 liveSlider('flangerDepth','flangerDepthVal',' ms', function(v){ if(flangerNodes) flangerNodes.depthGain.gain.value = v/1000; });
 liveSlider('flangerBase','flangerBaseVal',' ms', function(v){ if(flangerNodes) flangerNodes.delay.delayTime.value = v/1000; });
 liveSlider('flangerFeedback','flangerFeedbackVal','%', function(v){ if(flangerNodes) flangerNodes.feedback.gain.value = v; document.getElementById('flangerFeedbackVal').textContent = Math.round(v*100)+'%'; });
+
+liveSlider('gateDepth','gateDepthVal','%', function(v){ if(gateGain){ gateGain.gain.value = 1-v/100; gateDepthGain.gain.value = v/100; } }, true);
+liveSlider('gateRate','gateRateVal',' Hz', function(v){ if(gateLFO) gateLFO.frequency.value = v; });
+
+liveSlider('panDepth','panDepthVal','%', function(v){ if(panDepthGain) panDepthGain.gain.value = v/100; }, true);
+liveSlider('panRate','panRateVal',' Hz', function(v){ if(panLFO) panLFO.frequency.value = v; });
+
 liveSlider('echoMix','echoMixVal','%', function(v){ if(echoNodes){ echoNodes.dry.gain.value = 1-v/100; echoNodes.wet.gain.value = v/100; } }, true);
 liveSlider('echoDelay','echoDelayVal',' ms', function(v){ if(echoNodes) echoNodes.delay.delayTime.value = v/1000; });
 liveSlider('echoFeedback','echoFeedbackVal','%', function(v){ if(echoNodes) echoNodes.feedback.gain.value = v; document.getElementById('echoFeedbackVal').textContent = Math.round(v*100)+'%'; });
+
+liveSlider('reverbMix','reverbMixVal','%', function(v){ if(reverbDryWet){ reverbDryWet.dry.gain.value=1-v/100; reverbDryWet.wet.gain.value=v/100; } }, true);
+liveSlider('reverbDecay','reverbDecayVal',' s', function(v){ if(reverbNode && audioCtx) reverbNode.buffer = makeImpulseResponse(audioCtx, v); });
+
 liveSlider('masterVol','masterVolVal','%', function(v){ if(masterGain) masterGain.gain.value = v/100; });
+
+liveSlider('stutterLength','stutterLengthVal',' ms', function(v){ if(stutterDelay) stutterDelay.delayTime.value = v/1000; });
+liveSlider('stutterFeedback','stutterFeedbackVal','%', function(v){ if(stutterFeedbackGain) stutterFeedbackGain.gain.value = v; document.getElementById('stutterFeedbackVal').textContent = Math.round(v*100)+'%'; });
+liveSlider('spinbackDuration','spinbackDurationVal',' s', function(){});
+liveSlider('reverseLength','reverseLengthVal',' s', function(){});
 
 function applyPreset(sliderIds, values){
   applyingPreset = true;
@@ -317,24 +539,20 @@ function applyPreset(sliderIds, values){
   });
   applyingPreset = false;
 }
-
 document.getElementById('flangerPreset').addEventListener('change', function(){
-  const name = this.value;
-  if(name === 'custom') return;
+  const name = this.value; if(name === 'custom') return;
   const p = FLANGER_PRESETS[name];
   applyPreset(['flangerMix','flangerRate','flangerDepth','flangerBase','flangerFeedback'], [p.mix,p.rate,p.depth,p.base,p.feedback]);
 });
-
 document.getElementById('echoPreset').addEventListener('change', function(){
-  const name = this.value;
-  if(name === 'custom') return;
+  const name = this.value; if(name === 'custom') return;
   const p = ECHO_PRESETS[name];
   applyPreset(['echoMix','echoDelay','echoFeedback'], [p.mix,p.delay,p.feedback]);
 });
 
 document.getElementById('resetBtn').addEventListener('click', function(){
   applyingPreset = true;
-  [['filterSlider',0],['flangerMix',0],['echoMix',0]].forEach(function(pair){
+  [['filterSlider',0],['distMix',0],['phaserMix',0],['flangerMix',0],['gateDepth',0],['panDepth',0],['echoMix',0],['reverbMix',0]].forEach(function(pair){
     const el = document.getElementById(pair[0]);
     el.value = pair[1];
     el.dispatchEvent(new Event('input'));
@@ -344,12 +562,93 @@ document.getElementById('resetBtn').addEventListener('click', function(){
   document.getElementById('echoPreset').value = 'custom';
 });
 
+// --- Beat Roll / Stutter: gedrückt halten = Crossfade auf den Delay-Loop ---
+function stutterEngage(){
+  if(!audioCtx || !dryGain) return;
+  const t = audioCtx.currentTime;
+  dryGain.gain.cancelScheduledValues(t); dryGain.gain.setTargetAtTime(0, t, 0.005);
+  stutterWet.gain.cancelScheduledValues(t); stutterWet.gain.setTargetAtTime(1, t, 0.005);
+  document.getElementById('stutterBtn').classList.add('active');
+}
+function stutterRelease(){
+  if(!audioCtx || !dryGain) return;
+  const t = audioCtx.currentTime;
+  dryGain.gain.cancelScheduledValues(t); dryGain.gain.setTargetAtTime(1, t, 0.02);
+  stutterWet.gain.cancelScheduledValues(t); stutterWet.gain.setTargetAtTime(0, t, 0.02);
+  document.getElementById('stutterBtn').classList.remove('active');
+}
+const stutterBtn = document.getElementById('stutterBtn');
+stutterBtn.addEventListener('mousedown', stutterEngage);
+stutterBtn.addEventListener('touchstart', function(e){ e.preventDefault(); stutterEngage(); });
+['mouseup','mouseleave'].forEach(function(ev){ stutterBtn.addEventListener(ev, stutterRelease); });
+stutterBtn.addEventListener('touchend', function(e){ e.preventDefault(); stutterRelease(); });
+
+// --- Vinyl-Bremse: playbackRate/Frequenz ueber die Zeit runterfahren ---
+document.getElementById('spinbackBtn').addEventListener('click', function(){
+  if(!audioCtx) return;
+  const duration = fval('spinbackDuration');
+  const start = performance.now();
+  if(spinbackRAF) cancelAnimationFrame(spinbackRAF);
+  if(usingTestTone && testOsc){
+    testOsc.frequency.cancelScheduledValues(audioCtx.currentTime);
+    testOsc.frequency.setValueAtTime(testOsc.frequency.value || 220, audioCtx.currentTime);
+    testOsc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+  } else if(sourceAudioEl){
+    const startRate = sourceAudioEl.playbackRate || 1;
+    function step(){
+      const elapsed = (performance.now()-start)/1000;
+      const t = Math.min(1, elapsed/duration);
+      const rate = startRate * Math.pow(0.001/startRate, t);
+      sourceAudioEl.playbackRate = Math.max(0.01, rate);
+      if(t < 1) spinbackRAF = requestAnimationFrame(step);
+    }
+    step();
+  }
+});
+document.getElementById('spinbackResetBtn').addEventListener('click', function(){
+  if(spinbackRAF) cancelAnimationFrame(spinbackRAF);
+  if(sourceAudioEl) sourceAudioEl.playbackRate = 1;
+  if(testOsc && audioCtx) testOsc.frequency.setValueAtTime(220, audioCtx.currentTime);
+});
+
+// --- Reverse: letzten Ausschnitt aus dem dekodierten Buffer nehmen, umkehren, einmal abspielen ---
+function reverseBufferSlice(buffer, endTime, lengthSec, ctx){
+  const sr = buffer.sampleRate;
+  const endSample = Math.min(buffer.length, Math.max(0, Math.round(endTime*sr)));
+  const lenSamples = Math.min(endSample, Math.round(lengthSec*sr));
+  const startSample = endSample - lenSamples;
+  const out = ctx.createBuffer(buffer.numberOfChannels, lenSamples, sr);
+  for(let ch=0; ch<buffer.numberOfChannels; ch++){
+    const src = buffer.getChannelData(ch);
+    const dst = out.getChannelData(ch);
+    for(let i=0;i<lenSamples;i++) dst[i] = src[startSample + (lenSamples-1-i)];
+  }
+  return out;
+}
+document.getElementById('reverseBtn').addEventListener('click', function(){
+  if(!audioCtx || !decodedBuffer || !sourceAudioEl || !filterNode) return;
+  const len = fval('reverseLength');
+  const slice = reverseBufferSlice(decodedBuffer, sourceAudioEl.currentTime, len, audioCtx);
+  const src = audioCtx.createBufferSource();
+  src.buffer = slice;
+  src.connect(filterNode);
+  src.start();
+});
+
 document.getElementById('copyBtn').addEventListener('click', function(){
   const fp = combinedFilterParams(fval('filterSlider'));
   const settings = {
     filter: { type: fp.type, freq: Math.round(fp.freq), sliderPosition: fval('filterSlider') },
+    verzerrung: { mixPercent: fval('distMix'), amount: fval('distAmount') },
+    phaser: { mixPercent: fval('phaserMix'), rate: fval('phaserRate'), depthHz: fval('phaserDepth'), feedback: fval('phaserFeedback') },
     flanger: { preset: document.getElementById('flangerPreset').value, mixPercent: fval('flangerMix'), rate: fval('flangerRate'), depthMs: fval('flangerDepth'), baseDelayMs: fval('flangerBase'), feedback: fval('flangerFeedback') },
-    echo: { preset: document.getElementById('echoPreset').value, mixPercent: fval('echoMix'), delayMs: fval('echoDelay'), feedback: fval('echoFeedback') }
+    tranceGate: { depthPercent: fval('gateDepth'), rateHz: fval('gateRate') },
+    autopan: { depthPercent: fval('panDepth'), rateHz: fval('panRate') },
+    echo: { preset: document.getElementById('echoPreset').value, mixPercent: fval('echoMix'), delayMs: fval('echoDelay'), feedback: fval('echoFeedback') },
+    reverb: { mixPercent: fval('reverbMix'), decaySeconds: fval('reverbDecay') },
+    beatRoll: { loopLengthMs: fval('stutterLength'), feedback: fval('stutterFeedback') },
+    vinylBrake: { durationSeconds: fval('spinbackDuration') },
+    reverse: { lengthSeconds: fval('reverseLength') }
   };
   const text = JSON.stringify(settings, null, 2);
   navigator.clipboard.writeText(text).then(function(){
