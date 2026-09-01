@@ -42,11 +42,11 @@
     <button id="playPauseBtn" disabled>Play</button>
   </div>
   <div class="sliders">
-    <div class="row"><label>Flug-Geschwindigkeit</label><input type="range" id="speed" min="10" max="100" value="45"><span class="val" id="speedVal">45</span></div>
-    <div class="row"><label>Peak-Stärke</label><input type="range" id="peakStrength" min="0" max="100" value="65"><span class="val" id="peakStrengthVal">65</span></div>
-    <div class="row"><label>Glow-Intensität</label><input type="range" id="glow" min="0" max="100" value="70"><span class="val" id="glowVal">70</span></div>
-    <div class="row"><label>Ringe</label><input type="range" id="ringCount" min="16" max="60" value="36" step="2"><span class="val" id="ringCountVal">36</span></div>
-    <div class="row"><label>Bass-Blitz</label><input type="range" id="flashStrength" min="0" max="100" value="55"><span class="val" id="flashStrengthVal">55</span></div>
+    <div class="row"><label>Flug-Geschwindigkeit</label><input type="range" id="speed" min="10" max="100" value="10"><span class="val" id="speedVal">10</span></div>
+    <div class="row"><label>Peak-Stärke</label><input type="range" id="peakStrength" min="0" max="100" value="100"><span class="val" id="peakStrengthVal">100</span></div>
+    <div class="row"><label>Glow-Intensität</label><input type="range" id="glow" min="0" max="100" value="100"><span class="val" id="glowVal">100</span></div>
+    <div class="row"><label>Ringe</label><input type="range" id="ringCount" min="16" max="60" value="16" step="2"><span class="val" id="ringCountVal">16</span></div>
+    <div class="row"><label>Bass-Blitz</label><input type="range" id="flashStrength" min="0" max="100" value="100"><span class="val" id="flashStrengthVal">100</span></div>
   </div>
 </div>
 
@@ -142,7 +142,7 @@ document.getElementById('hideHud').addEventListener('click', function(){
 });
 
 // ---------- Regler ----------
-const params = { speed:45, peakStrength:65, glow:70, ringCount:36, flashStrength:55 };
+const params = { speed:10, peakStrength:100, glow:100, ringCount:16, flashStrength:100 };
 ['speed','peakStrength','glow','ringCount','flashStrength'].forEach(function(id){
   const el = document.getElementById(id);
   const lbl = document.getElementById(id+'Val');
@@ -155,6 +155,15 @@ const params = { speed:45, peakStrength:65, glow:70, ringCount:36, flashStrength
 // ---------- Audio-Analyse ----------
 const POINTS = 48;      // Punkte pro Ring
 const MAXZ = 2000;       // Tunneltiefe
+const FOCAL = 300;
+let baseRadius = 200;
+function computeBaseRadius(){
+  const halfDiag = Math.sqrt(W*W + H*H) / 2;
+  const scaleAtFar = FOCAL / (FOCAL + MAXZ);
+  baseRadius = (halfDiag / scaleAtFar) * 1.1; // Puffer, damit auch der fernste Ring den Rand ueberragt
+}
+computeBaseRadius();
+window.addEventListener('resize', computeBaseRadius);
 let bassEnv=0, bassPrev=0, overallEnv=0;
 function getSpectrumSnapshot(){
   const snap = new Float32Array(POINTS);
@@ -231,9 +240,31 @@ function updateRings(dt){
   flashAmount *= 0.85;
 }
 
+// Unregelmaessiges Rein-/Rauszoomen: Zufallsziel, sanft angenaehert (wie das Zentrum, andere Rhythmik)
+let zoomFactor = 1, zoomTarget = 1, zoomTimer = 0;
+function updateZoom(dt){
+  zoomTimer -= dt;
+  if(zoomTimer <= 0){
+    zoomTimer = 1.2 + Math.random()*3;
+    zoomTarget = 0.65 + Math.random()*0.9; // mal reingezoomt (>1), mal rausgezoomt (<1)
+  }
+  zoomFactor += (zoomTarget - zoomFactor) * dt * 1.4;
+}
+
+// Tunnel-Drehung: Drehgeschwindigkeit wandert langsam zwischen im- und gegen-den-Uhrzeigersinn
+let rotationAngle = 0, rotationSpeed = 0, rotationSpeedTarget = 0, rotationTimer = 0;
+function updateRotation(dt){
+  rotationTimer -= dt;
+  if(rotationTimer <= 0){
+    rotationTimer = 3 + Math.random()*5;
+    rotationSpeedTarget = (Math.random()*2 - 1) * 0.35; // negativ = gegen den Uhrzeigersinn
+  }
+  rotationSpeed += (rotationSpeedTarget - rotationSpeed) * dt * 0.5;
+  rotationAngle += rotationSpeed * dt;
+}
+
 function project(x, y, z, cx, cy){
-  const focal = 300;
-  const scale = focal / (focal + z);
+  const scale = (FOCAL*zoomFactor) / (FOCAL + z);
   return { x: cx + x*scale, y: cy + y*scale, scale: scale };
 }
 
@@ -243,7 +274,6 @@ function draw(){
   ctx.fillRect(0,0,W,H);
 
   const cx = center.x, cy = center.y;
-  const baseRadius = Math.min(W,H) * 0.32;
   const peak = params.peakStrength/100;
   const glowAmt = params.glow/100;
 
@@ -255,7 +285,7 @@ function draw(){
     const projected = [];
     for(let i=0;i<=POINTS;i++){
       const idx = i % POINTS;
-      const angle = (idx/POINTS) * Math.PI*2;
+      const angle = (idx/POINTS) * Math.PI*2 + rotationAngle;
       const disp = r.shape[idx] * peak * baseRadius * 0.9;
       const radius = baseRadius + disp;
       const px = Math.cos(angle) * radius;
@@ -319,6 +349,8 @@ function frame(now){
   lastT = now;
   analyzeEnergy();
   updateCenter(dt);
+  updateZoom(dt);
+  updateRotation(dt);
   updateRings(dt);
   draw();
 }
