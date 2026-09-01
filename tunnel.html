@@ -301,7 +301,12 @@ function draw(){
     ctx.stroke();
 
     // Schlieren: bei lauten Ausschlaegen zieht eine ausgeblendete Linie radial bis zum Bildschirmrand
+    // (gebuendelt in 2 Zeichenaufrufen pro Ring statt einem Farbverlauf+Stroke pro Punkt -> deutlich schneller)
     if(brightness > 0.08){
+      ctx.shadowBlur = 0; // teurer Weichzeichner soll hier NICHT nochmal pro Schliere greifen
+      const outerPath = new Path2D();
+      const innerPath = new Path2D();
+      let any = false;
       projected.forEach(function(pt){
         if(pt.dispNorm < 0.4) return;
         const dx = Math.cos(pt.angle), dy = Math.sin(pt.angle);
@@ -314,18 +319,19 @@ function draw(){
         const reach = Math.min(1, (pt.dispNorm - 0.4) / 0.6) * peak;
         const ex = cx + dx * edgeT * reach;
         const ey = cy + dy * edgeT * reach;
-        const grad = ctx.createLinearGradient(pt.p.x, pt.p.y, ex, ey);
-        const baseAlpha = (0.3 + brightness*0.5) * pt.dispNorm;
-        grad.addColorStop(0, `hsla(${r.hue},100%,75%,${baseAlpha})`);
-        grad.addColorStop(0.4, `hsla(${r.hue},100%,70%,${baseAlpha*0.35})`);
-        grad.addColorStop(1, `hsla(${r.hue},100%,70%,0)`);
-        ctx.strokeStyle = grad;
-        ctx.lineWidth = 0.6 + brightness*1.8;
-        ctx.beginPath();
-        ctx.moveTo(pt.p.x, pt.p.y);
-        ctx.lineTo(ex, ey);
-        ctx.stroke();
+        const midX = pt.p.x + (ex-pt.p.x)*0.4, midY = pt.p.y + (ey-pt.p.y)*0.4;
+        outerPath.moveTo(pt.p.x, pt.p.y); outerPath.lineTo(ex, ey);
+        innerPath.moveTo(pt.p.x, pt.p.y); innerPath.lineTo(midX, midY);
+        any = true;
       });
+      if(any){
+        ctx.strokeStyle = `hsla(${r.hue},100%,70%,${(0.12+brightness*0.2)})`;
+        ctx.lineWidth = 0.6 + brightness*1.4;
+        ctx.stroke(outerPath);
+        ctx.strokeStyle = `hsla(${r.hue},100%,78%,${(0.3+brightness*0.4)})`;
+        ctx.lineWidth = 0.8 + brightness*1.8;
+        ctx.stroke(innerPath);
+      }
     }
   });
   ctx.shadowBlur = 0;
