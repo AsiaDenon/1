@@ -195,6 +195,23 @@ buildRings();
 let flashAmount = 0;
 let hueTime = 0;
 
+// Zentrum wandert organisch durchs Bild: alle paar Sekunden neues Zufallsziel, sanft angenaehert
+let center = { x: 0, y: 0 };
+let centerTarget = { x: 0, y: 0 };
+let centerTimer = 0;
+function updateCenter(dt){
+  if(center.x === 0 && center.y === 0 && centerTimer === 0){ center.x = W/2; center.y = H/2; centerTarget.x = W/2; centerTarget.y = H/2; }
+  centerTimer -= dt;
+  if(centerTimer <= 0){
+    centerTimer = 2 + Math.random()*3.5;
+    const mx = W*0.22, my = H*0.22;
+    centerTarget.x = mx + Math.random()*(W-2*mx);
+    centerTarget.y = my + Math.random()*(H-2*my);
+  }
+  center.x += (centerTarget.x - center.x) * dt * 0.4;
+  center.y += (centerTarget.y - center.y) * dt * 0.4;
+}
+
 function updateRings(dt){
   const speed = params.speed * 4;
   hueTime += dt * 12;
@@ -221,11 +238,11 @@ function project(x, y, z, cx, cy){
 }
 
 function draw(){
-  // Trail statt Vollclear -> Bewegungsunschaerfe / Glow-Nachzieheffekt
-  ctx.fillStyle = 'rgba(0,0,0,0.28)';
+  // Laengerer Trail (niedrigerer Alpha-Wert = staerkeres Verwaschen zwischen Frames)
+  ctx.fillStyle = 'rgba(0,0,0,0.14)';
   ctx.fillRect(0,0,W,H);
 
-  const cx = W/2, cy = H/2;
+  const cx = center.x, cy = center.y;
   const baseRadius = Math.min(W,H) * 0.32;
   const peak = params.peakStrength/100;
   const glowAmt = params.glow/100;
@@ -235,6 +252,7 @@ function draw(){
   sorted.forEach(function(r){
     const brightness = Math.max(0, 1 - r.z/MAXZ);
     ctx.beginPath();
+    const projected = [];
     for(let i=0;i<=POINTS;i++){
       const idx = i % POINTS;
       const angle = (idx/POINTS) * Math.PI*2;
@@ -243,6 +261,7 @@ function draw(){
       const px = Math.cos(angle) * radius;
       const py = Math.sin(angle) * radius;
       const p = project(px, py, r.z, cx, cy);
+      projected.push({ p:p, angle:angle, dispNorm:r.shape[idx] });
       if(i===0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
     }
     const alpha = 0.15 + brightness*0.85;
@@ -251,6 +270,34 @@ function draw(){
     ctx.shadowBlur = glowAmt * (8 + brightness*22);
     ctx.shadowColor = `hsla(${r.hue},100%,60%,1)`;
     ctx.stroke();
+
+    // Schlieren: bei lauten Ausschlaegen zieht eine ausgeblendete Linie radial bis zum Bildschirmrand
+    if(brightness > 0.08){
+      projected.forEach(function(pt){
+        if(pt.dispNorm < 0.4) return;
+        const dx = Math.cos(pt.angle), dy = Math.sin(pt.angle);
+        let edgeT = Infinity;
+        if(dx > 0.0001) edgeT = Math.min(edgeT, (W-cx)/dx);
+        else if(dx < -0.0001) edgeT = Math.min(edgeT, (0-cx)/dx);
+        if(dy > 0.0001) edgeT = Math.min(edgeT, (H-cy)/dy);
+        else if(dy < -0.0001) edgeT = Math.min(edgeT, (0-cy)/dy);
+        if(!isFinite(edgeT) || edgeT <= 0) return;
+        const reach = Math.min(1, (pt.dispNorm - 0.4) / 0.6) * peak;
+        const ex = cx + dx * edgeT * reach;
+        const ey = cy + dy * edgeT * reach;
+        const grad = ctx.createLinearGradient(pt.p.x, pt.p.y, ex, ey);
+        const baseAlpha = (0.3 + brightness*0.5) * pt.dispNorm;
+        grad.addColorStop(0, `hsla(${r.hue},100%,75%,${baseAlpha})`);
+        grad.addColorStop(0.4, `hsla(${r.hue},100%,70%,${baseAlpha*0.35})`);
+        grad.addColorStop(1, `hsla(${r.hue},100%,70%,0)`);
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 0.6 + brightness*1.8;
+        ctx.beginPath();
+        ctx.moveTo(pt.p.x, pt.p.y);
+        ctx.lineTo(ex, ey);
+        ctx.stroke();
+      });
+    }
   });
   ctx.shadowBlur = 0;
 
@@ -271,6 +318,7 @@ function frame(now){
   const dt = Math.min(0.05, (now - lastT)/1000);
   lastT = now;
   analyzeEnergy();
+  updateCenter(dt);
   updateRings(dt);
   draw();
 }
