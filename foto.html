@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Foto-Integration Mockup</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:-apple-system,Segoe UI,Roboto,sans-serif}
+  canvas{display:block;width:100%;height:100%}
+  h1{position:fixed;top:14px;left:16px;margin:0;font-size:14px;font-weight:600;color:#fff;
+    text-shadow:0 0 12px rgba(0,255,255,.8);z-index:5}
+  h1 span{display:block;font-size:11px;font-weight:400;color:#8ad;margin-top:2px}
+  .hud{position:fixed;left:0;right:0;bottom:0;padding:14px 16px calc(14px + env(safe-area-inset-bottom));
+    background:linear-gradient(to top, rgba(0,0,0,.92), rgba(0,0,0,0));
+    display:flex;flex-direction:column;gap:10px;z-index:5}
+  .source-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button,input[type=file]::file-selector-button{
+    padding:8px 12px;background:rgba(0,10,20,.7);border:1px solid rgba(0,255,255,.35);border-radius:8px;
+    color:#dff;cursor:pointer;font-size:13px}
+  button:hover{background:rgba(0,255,255,.15)}
+  button:disabled{opacity:.35;cursor:not-allowed}
+  input[type=file]{color:#8ad;font-size:12px;flex:1;min-width:120px}
+  .sliders{display:grid;gap:6px;background:rgba(0,10,20,.7);border:1px solid rgba(0,255,255,.25);
+    border-radius:10px;padding:10px 12px}
+  .row{display:flex;align-items:center;gap:8px}
+  .row label{width:130px;font-size:11px;color:#8ad;flex-shrink:0}
+  .row input[type=range]{flex:1;accent-color:#0ff}
+  .row .val{width:44px;text-align:right;font-size:11px;color:#0ff;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<h1>📸 Foto im Tunnel <span>eingefärbt einblenden, dann wegspülen · Mockup</span></h1>
+
+<div class="hud" id="hud">
+  <div class="source-row">
+    <input type="file" id="photoInput" accept="image/*">
+    <button id="useTestImage">🖼️ Testbild verwenden</button>
+    <button id="triggerBtn" disabled>📸 Einblenden</button>
+  </div>
+  <div class="sliders">
+    <div class="row"><label>Steh-Dauer</label><input type="range" id="holdDur" min="0.5" max="6" step="0.1" value="2.5"><span class="val" id="holdDurVal">2.5s</span></div>
+    <div class="row"><label>Wellen-Dauer</label><input type="range" id="waveDur" min="0.5" max="6" step="0.1" value="2.5"><span class="val" id="waveDurVal">2.5s</span></div>
+    <div class="row"><label>Farbanpassung</label><input type="range" id="tintStrength" min="0" max="100" value="55"><span class="val" id="tintStrengthVal">55</span></div>
+    <div class="row"><label>Bildgröße</label><input type="range" id="photoScale" min="20" max="90" value="55"><span class="val" id="photoScaleVal">55</span></div>
+  </div>
+</div>
+
+<script>
+// ================= Canvas & Tunnel-Hintergrund (vereinfachte Kernversion) =================
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W=0,H=0,DPR=Math.min(2,window.devicePixelRatio||1);
+function resize(){
+  W=window.innerWidth; H=window.innerHeight;
+  canvas.width=W*DPR; canvas.height=H*DPR;
+  canvas.style.width=W+'px'; canvas.style.height=H+'px';
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  computeBaseRadius();
+}
+window.addEventListener('resize', resize);
+
+const POINTS=48, MAXZ=2000, FOCAL=300;
+let baseRadius=200;
+function computeBaseRadius(){
+  const halfDiag = Math.sqrt(W*W+H*H)/2;
+  baseRadius = halfDiag*1.15;
+}
+let rings=[];
+function buildRings(count){
+  rings=[];
+  for(let i=0;i<count;i++) rings.push({ z:(i/count)*MAXZ, hue:(i*37)%360 });
+}
+buildRings(16);
+let hueTime=0, rotationAngle=0;
+function project(x,y,z,cx,cy){
+  const scale = FOCAL/(FOCAL+z);
+  return { x:cx+x*scale, y:cy+y*scale, scale };
+}
+function drawTunnel(dt){
+  ctx.fillStyle='rgba(0,0,0,0.14)';
+  ctx.fillRect(0,0,W,H);
+  hueTime += dt*10;
+  rotationAngle += dt*0.15;
+  const cx=W/2, cy=H/2;
+  const sorted = rings.slice().sort((a,b)=>b.z-a.z);
+  sorted.forEach(function(r){
+    r.z -= 90*dt*60*0.02; // sanfter, konstanter Flug (kein Audio in diesem fokussierten Mockup noetig)
+    if(r.z<=1){ r.z += MAXZ; r.hue=(hueTime+Math.random()*30)%360; }
+    const brightness = Math.max(0,1-r.z/MAXZ);
+    ctx.beginPath();
+    for(let i=0;i<=POINTS;i++){
+      const angle=(i/POINTS)*Math.PI*2+rotationAngle;
+      const p = project(Math.cos(angle)*baseRadius, Math.sin(angle)*baseRadius, r.z, cx, cy);
+      if(i===0) ctx.moveTo(p.x,p.y); else ctx.lineTo(p.x,p.y);
+    }
+    ctx.strokeStyle = `hsla(${r.hue},100%,${55+brightness*25}%,${0.15+brightness*0.7})`;
+    ctx.lineWidth = 1+brightness*2;
+    ctx.stroke();
+  });
+}
+function currentTunnelHue(){ return hueTime % 360; }
+
+// ================= Testbild (im Code gezeichnet, kein Download noetig) =================
+function makeTestImage(){
+  const c = document.createElement('canvas');
+  c.width = 640; c.height = 480;
+  const g = c.getContext('2d');
+  // Himmel-Verlauf
+  const sky = g.createLinearGradient(0,0,0,480);
+  sky.addColorStop(0,'#2b1055'); sky.addColorStop(1,'#7c2ae8');
+  g.fillStyle = sky; g.fillRect(0,0,640,480);
+  // Discokugel
+  g.save();
+  g.translate(320,150);
+  const ball = g.createRadialGradient(-20,-20,10,0,0,90);
+  ball.addColorStop(0,'#fff'); ball.addColorStop(0.5,'#cfefff'); ball.addColorStop(1,'#6fa8dc');
+  g.fillStyle = ball;
+  g.beginPath(); g.arc(0,0,80,0,Math.PI*2); g.fill();
+  g.strokeStyle = 'rgba(0,0,0,.25)'; g.lineWidth=1;
+  for(let i=-3;i<=3;i++){ g.beginPath(); g.moveTo(-80,i*22); g.lineTo(80,i*22); g.stroke(); }
+  for(let i=-3;i<=3;i++){ g.beginPath(); g.ellipse(0,0,Math.abs(i*22)>78?0:Math.sqrt(80*80-(i*22)*(i*22)),80,0,0,Math.PI*2); g.stroke(); }
+  g.restore();
+  // Lichtstrahlen
+  for(let i=0;i<10;i++){
+    g.strokeStyle = `hsla(${i*36},90%,65%,.5)`;
+    g.lineWidth = 3;
+    g.beginPath(); g.moveTo(320,150);
+    g.lineTo(320+Math.cos(i*0.63)*400, 150+Math.sin(i*0.63)*400);
+    g.stroke();
+  }
+  // Silhouetten (tanzende Leute)
+  g.fillStyle = 'rgba(10,5,20,.85)';
+  const people = [[120,470],[220,460],[420,465],[520,470],[300,475]];
+  people.forEach(function(p,idx){
+    const bob = Math.sin(idx*1.7)*10;
+    g.beginPath();
+    g.ellipse(p[0], p[1]-40+bob, 16, 42, 0, 0, Math.PI*2);
+    g.fill();
+    g.beginPath(); g.arc(p[0], p[1]-88+bob, 14, 0, Math.PI*2); g.fill();
+    g.save(); g.translate(p[0],p[1]-55+bob); g.rotate(idx%2?0.6:-0.6);
+    g.fillRect(-5,-30,10,30); g.restore();
+  });
+  // funkelnde Punkte
+  for(let i=0;i<60;i++){
+    g.fillStyle = `hsla(${Math.random()*360},90%,80%,${Math.random()*0.8+0.2})`;
+    g.beginPath(); g.arc(Math.random()*640, Math.random()*300, Math.random()*2+0.5, 0, Math.PI*2); g.fill();
+  }
+  return c;
+}
+
+// ================= Foto-Ueberlagerung mit Toenung + Wellen-Aufloesung =================
+let photoSourceCanvas = null; // Original, ungetoent
+let photoCanvas = null;       // getoente Version fuer die aktuelle Anzeige
+let photoActive = false;
+let photoStartTime = 0;
+const params = { holdDur:2.5, waveDur:2.5, tintStrength:55, photoScale:55 };
+
+function loadImageToCanvas(img){
+  const c = document.createElement('canvas');
+  c.width = img.naturalWidth || img.width;
+  c.height = img.naturalHeight || img.height;
+  c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+  photoSourceCanvas = c;
+  document.getElementById('triggerBtn').disabled = false;
+}
+
+document.getElementById('useTestImage').addEventListener('click', function(){
+  photoSourceCanvas = makeTestImage();
+  document.getElementById('triggerBtn').disabled = false;
+});
+document.getElementById('photoInput').addEventListener('change', function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const img = new Image();
+  img.onload = function(){ loadImageToCanvas(img); URL.revokeObjectURL(img.src); };
+  img.src = URL.createObjectURL(file);
+});
+
+function prepareTintedPhoto(){
+  if(!photoSourceCanvas) return;
+  const c = document.createElement('canvas');
+  c.width = photoSourceCanvas.width; c.height = photoSourceCanvas.height;
+  const pctx = c.getContext('2d');
+  pctx.drawImage(photoSourceCanvas, 0, 0);
+  const hue = currentTunnelHue();
+  pctx.globalCompositeOperation = 'color';
+  pctx.globalAlpha = params.tintStrength/100;
+  pctx.fillStyle = `hsl(${hue},85%,55%)`;
+  pctx.fillRect(0,0,c.width,c.height);
+  pctx.globalCompositeOperation = 'source-over';
+  pctx.globalAlpha = 1;
+
+  // Weiche Raender: elliptische Ausblendmaske passend zum Seitenverhaeltnis des Fotos
+  pctx.save();
+  pctx.globalCompositeOperation = 'destination-in';
+  pctx.translate(c.width/2, c.height/2);
+  pctx.scale(c.width/2, c.height/2);
+  const feather = pctx.createRadialGradient(0,0,0.5, 0,0,1.02);
+  feather.addColorStop(0, 'rgba(255,255,255,1)');
+  feather.addColorStop(1, 'rgba(255,255,255,0)');
+  pctx.fillStyle = feather;
+  pctx.fillRect(-1,-1,2,2);
+  pctx.restore();
+  pctx.globalCompositeOperation = 'source-over';
+
+  photoCanvas = c;
+}
+
+document.getElementById('triggerBtn').addEventListener('click', function(){
+  if(!photoSourceCanvas) return;
+  prepareTintedPhoto();
+  photoActive = true;
+  photoStartTime = performance.now();
+});
+
+function drawPhotoOverlay(now){
+  if(!photoActive || !photoCanvas) return;
+  const elapsed = (now - photoStartTime)/1000;
+  const hold = params.holdDur, wave = params.waveDur;
+  const total = wave + hold + wave; // Einblenden + Stehen + Ausblenden, symmetrisch
+  if(elapsed > total){ photoActive = false; return; }
+
+  const scaleFrac = params.photoScale/100;
+  const aspect = photoCanvas.width / photoCanvas.height;
+  let pw = W*scaleFrac, ph = pw/aspect;
+  if(ph > H*scaleFrac){ ph = H*scaleFrac; pw = ph*aspect; }
+  const px0 = (W-pw)/2, py0 = (H-ph)/2;
+
+  // Einblenden = exakte Umkehrung des Ausblendens (progress laeuft von 1 auf 0 statt 0 auf 1)
+  let progress;
+  if(elapsed <= wave){
+    progress = 1 - (elapsed / wave);
+  } else if(elapsed <= wave + hold){
+    progress = 0;
+  } else {
+    progress = Math.min(1, (elapsed - wave - hold) / wave);
+  }
+
+  ctx.save();
+  if(progress <= 0){
+    ctx.globalAlpha = 1;
+    ctx.drawImage(photoCanvas, px0, py0, pw, ph);
+  } else {
+    // Klarer Bereich oberhalb der aufsteigenden Wellenlinie
+    const waveBaseY = py0 + ph*(1-progress);
+    ctx.beginPath();
+    ctx.rect(px0, py0, pw, Math.max(0, waveBaseY-py0));
+    ctx.clip();
+    ctx.globalAlpha = 1;
+    ctx.drawImage(photoCanvas, px0, py0, pw, ph);
+    ctx.restore();
+    ctx.save();
+    // Zerlaufendes Wellen-Band direkt an der Grenze: leicht versetzte, ausblendende Streifen
+    const bandHeight = Math.min(60, ph*0.25);
+    for(let i=0; i<bandHeight; i+=2){
+      const rowYOnScreen = waveBaseY + i;
+      const rowYOnPhoto = rowYOnScreen - py0;
+      if(rowYOnPhoto < 0 || rowYOnPhoto > ph-2) continue;
+      const t = i/bandHeight;
+      const xOffset = Math.sin(rowYOnScreen*0.09 + now*0.005) * (5 + t*16);
+      ctx.globalAlpha = Math.max(0,(1-t)*0.85);
+      ctx.drawImage(photoCanvas,
+        0, (rowYOnPhoto/ph)*photoCanvas.height, photoCanvas.width, 2/ph*photoCanvas.height,
+        px0+xOffset, rowYOnScreen, pw, 2);
+    }
+  }
+  ctx.restore();
+  ctx.globalAlpha = 1;
+}
+
+// ================= Regler =================
+['holdDur','waveDur','tintStrength','photoScale'].forEach(function(id){
+  const el = document.getElementById(id);
+  const lbl = document.getElementById(id+'Val');
+  el.addEventListener('input', function(){
+    params[id] = parseFloat(el.value);
+    lbl.textContent = el.value + (id==='holdDur'||id==='waveDur' ? 's' : '');
+  });
+});
+
+// ================= Hauptschleife =================
+let lastT = performance.now();
+function frame(now){
+  requestAnimationFrame(frame);
+  const dt = Math.min(0.05, (now-lastT)/1000);
+  lastT = now;
+  drawTunnel(dt);
+  drawPhotoOverlay(now);
+}
+resize();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
