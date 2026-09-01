@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tunnel Visualizer</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:-apple-system,Segoe UI,Roboto,sans-serif}
+  canvas{display:block;width:100%;height:100%}
+  h1{position:fixed;top:14px;left:16px;margin:0;font-size:14px;font-weight:600;letter-spacing:.02em;color:#fff;
+    text-shadow:0 0 12px rgba(0,255,255,.8);z-index:5}
+  h1 span{display:block;font-size:11px;font-weight:400;color:#8ad;margin-top:2px}
+  .toggle-hud{position:fixed;top:14px;right:16px;z-index:5}
+  button,input[type=file]::file-selector-button{
+    padding:8px 12px;background:rgba(0,10,20,.7);border:1px solid rgba(0,255,255,.35);border-radius:8px;
+    color:#dff;cursor:pointer;font-size:13px;backdrop-filter:blur(6px)}
+  button:hover{background:rgba(0,255,255,.15)}
+  button:disabled{opacity:.35;cursor:not-allowed}
+  .hud{position:fixed;left:0;right:0;bottom:0;padding:14px 16px calc(14px + env(safe-area-inset-bottom));
+    background:linear-gradient(to top, rgba(0,0,0,.92), rgba(0,0,0,0));
+    display:flex;flex-direction:column;gap:10px;z-index:5}
+  .source-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  input[type=file]{color:#8ad;font-size:12px;flex:1;min-width:140px}
+  .sliders{display:grid;gap:6px;background:rgba(0,10,20,.7);border:1px solid rgba(0,255,255,.25);
+    border-radius:10px;padding:10px 12px;backdrop-filter:blur(6px)}
+  .row{display:flex;align-items:center;gap:8px}
+  .row label{width:120px;font-size:11px;color:#8ad;flex-shrink:0}
+  .row input[type=range]{flex:1;accent-color:#0ff}
+  .row .val{width:40px;text-align:right;font-size:11px;color:#0ff;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<h1>🌀 Tunnel Visualizer <span>Sound-Peaks in Echtzeit · Mockup</span></h1>
+<button class="toggle-hud" id="hideHud">Bedienfeld ausblenden</button>
+
+<div class="hud" id="hud">
+  <div class="source-row">
+    <input type="file" id="fileInput" accept="audio/*">
+    <button id="testToneBtn">🔊 Testton</button>
+    <button id="playPauseBtn" disabled>Play</button>
+  </div>
+  <div class="sliders">
+    <div class="row"><label>Flug-Geschwindigkeit</label><input type="range" id="speed" min="10" max="100" value="10"><span class="val" id="speedVal">10</span></div>
+    <div class="row"><label>Peak-Stärke</label><input type="range" id="peakStrength" min="0" max="100" value="100"><span class="val" id="peakStrengthVal">100</span></div>
+    <div class="row"><label>Glow-Intensität</label><input type="range" id="glow" min="0" max="100" value="100"><span class="val" id="glowVal">100</span></div>
+    <div class="row"><label>Ringe</label><input type="range" id="ringCount" min="16" max="60" value="16" step="2"><span class="val" id="ringCountVal">16</span></div>
+    <div class="row"><label>Bass-Blitz</label><input type="range" id="flashStrength" min="0" max="100" value="100"><span class="val" id="flashStrengthVal">100</span></div>
+  </div>
+</div>
+
+<script>
+// ---------- Canvas Setup ----------
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W=0,H=0,DPR=Math.min(2,window.devicePixelRatio||1);
+function resize(){
+  W=window.innerWidth; H=window.innerHeight;
+  canvas.width=W*DPR; canvas.height=H*DPR;
+  canvas.style.width=W+'px'; canvas.style.height=H+'px';
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ---------- Audio Setup ----------
+let audioCtx=null, sourceNode=null, sourceAudioEl=null, testOsc=null, analyser=null;
+let dataFreq=null;
+let usingTestTone=false, isPlaying=false;
+
+function ensureCtx(){ if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); return audioCtx; }
+function initAnalyser(){
+  if(analyser) return;
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 1024;
+  analyser.smoothingTimeConstant = 0.55;
+  dataFreq = new Uint8Array(analyser.frequencyBinCount);
+  analyser.connect(audioCtx.destination);
+}
+function setSource(node){
+  if(sourceNode){ try{ sourceNode.disconnect(); }catch(e){} }
+  sourceNode = node;
+  sourceNode.connect(analyser);
+}
+document.getElementById('fileInput').addEventListener('change', function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  ensureCtx(); initAnalyser();
+  if(sourceAudioEl){ sourceAudioEl.pause(); sourceAudioEl.src=''; }
+  sourceAudioEl = new Audio();
+  sourceAudioEl.src = URL.createObjectURL(file);
+  sourceAudioEl.loop = true;
+  usingTestTone = false;
+  if(testOsc){ try{testOsc.stop();}catch(e){} testOsc=null; }
+  setSource(audioCtx.createMediaElementSource(sourceAudioEl));
+  sourceAudioEl.play();
+  isPlaying = true;
+  document.getElementById('playPauseBtn').disabled = false;
+  document.getElementById('playPauseBtn').textContent = 'Pause';
+});
+document.getElementById('testToneBtn').addEventListener('click', function(){
+  ensureCtx(); initAnalyser();
+  if(sourceAudioEl) sourceAudioEl.pause();
+  if(testOsc){ try{testOsc.stop();}catch(e){} }
+  usingTestTone = true;
+  testOsc = audioCtx.createOscillator();
+  testOsc.type = 'sawtooth';
+  testOsc.frequency.value = 80;
+  const toneGain = audioCtx.createGain(); toneGain.gain.value = 0.001;
+  testOsc.connect(toneGain);
+  testOsc.start();
+  // simulierter "Beat": periodische Lautstaerke-Stoesse, damit man Peaks sofort sieht
+  const ctxA = audioCtx;
+  function pulse(){
+    const t = ctxA.currentTime;
+    toneGain.gain.cancelScheduledValues(t);
+    toneGain.gain.setValueAtTime(0.5, t);
+    toneGain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+  }
+  pulse();
+  testOsc._pulseInterval = setInterval(pulse, 500);
+  setSource(toneGain);
+  isPlaying = true;
+  document.getElementById('playPauseBtn').disabled = false;
+  document.getElementById('playPauseBtn').textContent = 'Pause';
+});
+document.getElementById('playPauseBtn').addEventListener('click', function(){
+  if(usingTestTone){
+    if(isPlaying){ audioCtx.suspend(); isPlaying=false; this.textContent='Play'; }
+    else { audioCtx.resume(); isPlaying=true; this.textContent='Pause'; }
+  } else if(sourceAudioEl){
+    if(isPlaying){ sourceAudioEl.pause(); isPlaying=false; this.textContent='Play'; }
+    else { sourceAudioEl.play(); isPlaying=true; this.textContent='Pause'; }
+  }
+});
+document.getElementById('hideHud').addEventListener('click', function(){
+  const hud = document.getElementById('hud');
+  const hidden = hud.style.display === 'none';
+  hud.style.display = hidden ? 'flex' : 'none';
+  this.textContent = hidden ? 'Bedienfeld ausblenden' : 'Bedienfeld einblenden';
+});
+
+// ---------- Regler ----------
+const params = { speed:10, peakStrength:100, glow:100, ringCount:16, flashStrength:100 };
+['speed','peakStrength','glow','ringCount','flashStrength'].forEach(function(id){
+  const el = document.getElementById(id);
+  const lbl = document.getElementById(id+'Val');
+  el.addEventListener('input', function(){
+    params[id] = parseFloat(el.value); lbl.textContent = el.value;
+    if(id === 'ringCount') buildRings();
+  });
+});
+
+// ---------- Audio-Analyse ----------
+const POINTS = 48;      // Punkte pro Ring
+const MAXZ = 2000;       // Tunneltiefe
+const FOCAL = 300;
+let baseRadius = 200;
+function computeBaseRadius(){
+  const halfDiag = Math.sqrt(W*W + H*H) / 2;
+  baseRadius = halfDiag * 1.15; // bei z=0 (Skalierung=1) reicht der naechste Ring ueber den Bildrand hinaus; fern bleibt er klein (Tunnel-Tiefe bleibt erhalten)
+}
+computeBaseRadius();
+window.addEventListener('resize', computeBaseRadius);
+let bassEnv=0, bassPrev=0, overallEnv=0;
+function getSpectrumSnapshot(){
+  const snap = new Float32Array(POINTS);
+  if(!analyser){ return snap; }
+  analyser.getByteFrequencyData(dataFreq);
+  const usable = Math.floor(dataFreq.length * 0.75); // hohe, meist leere Bins auslassen
+  for(let i=0;i<POINTS;i++){
+    const bin = Math.floor((i/POINTS) * usable);
+    snap[i] = dataFreq[bin] / 255;
+  }
+  return snap;
+}
+function analyzeEnergy(){
+  if(!analyser) return;
+  analyser.getByteFrequencyData(dataFreq);
+  const n = dataFreq.length;
+  const bassEnd = Math.floor(n*0.08);
+  let bass=0, overall=0;
+  for(let i=0;i<bassEnd;i++) bass += dataFreq[i];
+  for(let i=0;i<n;i++) overall += dataFreq[i];
+  bass /= (bassEnd*255); overall /= (n*255);
+  bassPrev = bassEnv;
+  bassEnv += (bass - bassEnv) * 0.35;
+  overallEnv += (overall - overallEnv) * 0.1;
+}
+
+// ---------- Tunnel-Ringe ----------
+let rings = [];
+function buildRings(){
+  rings = [];
+  const count = Math.round(params.ringCount);
+  for(let i=0;i<count;i++){
+    rings.push({ z: (i/count) * MAXZ, shape: getSpectrumSnapshot(), hue: 180 });
+  }
+}
+buildRings();
+
+let flashAmount = 0;
+let hueTime = 0;
+
+// Zentrum wandert organisch durchs Bild: alle paar Sekunden neues Zufallsziel, sanft angenaehert
+let center = { x: 0, y: 0 };
+let centerTarget = { x: 0, y: 0 };
+let centerTimer = 0;
+function updateCenter(dt){
+  if(center.x === 0 && center.y === 0 && centerTimer === 0){ center.x = W/2; center.y = H/2; centerTarget.x = W/2; centerTarget.y = H/2; }
+  centerTimer -= dt;
+  if(centerTimer <= 0){
+    centerTimer = 2 + Math.random()*3.5;
+    const mx = W*0.22, my = H*0.22;
+    centerTarget.x = mx + Math.random()*(W-2*mx);
+    centerTarget.y = my + Math.random()*(H-2*my);
+  }
+  center.x += (centerTarget.x - center.x) * dt * 0.4;
+  center.y += (centerTarget.y - center.y) * dt * 0.4;
+}
+
+function updateRings(dt){
+  const speed = params.speed * 4;
+  hueTime += dt * 12;
+  const spacing = MAXZ / rings.length;
+  rings.forEach(function(r){
+    r.z -= speed * dt * 60;
+    if(r.z <= 1){
+      r.z += MAXZ;
+      r.shape = getSpectrumSnapshot();
+      r.hue = (hueTime + Math.random()*40) % 360;
+    }
+  });
+  // Bass-Onset erkennen -> Blitz ausloesen
+  if(bassEnv - bassPrev > 0.04 && bassEnv > 0.35){
+    flashAmount = Math.min(1, flashAmount + (params.flashStrength/100));
+  }
+  flashAmount *= 0.85;
+}
+
+// Unregelmaessiges Rein-/Rauszoomen: Zufallsziel, sanft angenaehert (wie das Zentrum, andere Rhythmik)
+let zoomFactor = 1, zoomTarget = 1, zoomTimer = 0;
+function updateZoom(dt){
+  zoomTimer -= dt;
+  if(zoomTimer <= 0){
+    zoomTimer = 1.2 + Math.random()*3;
+    zoomTarget = 0.65 + Math.random()*0.9; // mal reingezoomt (>1), mal rausgezoomt (<1)
+  }
+  zoomFactor += (zoomTarget - zoomFactor) * dt * 1.4;
+}
+
+// Tunnel-Drehung: Drehgeschwindigkeit wandert langsam zwischen im- und gegen-den-Uhrzeigersinn
+let rotationAngle = 0, rotationSpeed = 0, rotationSpeedTarget = 0, rotationTimer = 0;
+function updateRotation(dt){
+  rotationTimer -= dt;
+  if(rotationTimer <= 0){
+    rotationTimer = 3 + Math.random()*5;
+    rotationSpeedTarget = (Math.random()*2 - 1) * 0.35; // negativ = gegen den Uhrzeigersinn
+  }
+  rotationSpeed += (rotationSpeedTarget - rotationSpeed) * dt * 0.5;
+  rotationAngle += rotationSpeed * dt;
+}
+
+function project(x, y, z, cx, cy){
+  const scale = (FOCAL*zoomFactor) / (FOCAL + z);
+  return { x: cx + x*scale, y: cy + y*scale, scale: scale };
+}
+
+function draw(){
+  // Laengerer Trail (niedrigerer Alpha-Wert = staerkeres Verwaschen zwischen Frames)
+  ctx.fillStyle = 'rgba(0,0,0,0.14)';
+  ctx.fillRect(0,0,W,H);
+
+  const cx = center.x, cy = center.y;
+  const peak = params.peakStrength/100;
+  const glowAmt = params.glow/100;
+
+  const sorted = rings.slice().sort(function(a,b){ return b.z - a.z; }); // fern -> nah
+
+  sorted.forEach(function(r){
+    const brightness = Math.max(0, 1 - r.z/MAXZ);
+    ctx.beginPath();
+    const projected = [];
+    for(let i=0;i<=POINTS;i++){
+      const idx = i % POINTS;
+      const angle = (idx/POINTS) * Math.PI*2 + rotationAngle;
+      const disp = r.shape[idx] * peak * baseRadius * 0.9;
+      const radius = baseRadius + disp;
+      const px = Math.cos(angle) * radius;
+      const py = Math.sin(angle) * radius;
+      const p = project(px, py, r.z, cx, cy);
+      projected.push({ p:p, angle:angle, dispNorm:r.shape[idx] });
+      if(i===0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+    }
+    const alpha = 0.15 + brightness*0.85;
+    ctx.strokeStyle = `hsla(${r.hue},100%,${55+brightness*25}%,${alpha})`;
+    ctx.lineWidth = 1 + brightness*2.5;
+    ctx.shadowBlur = glowAmt * (8 + brightness*22);
+    ctx.shadowColor = `hsla(${r.hue},100%,60%,1)`;
+    ctx.stroke();
+
+    // Schlieren: bei lauten Ausschlaegen zieht eine ausgeblendete Linie radial bis zum Bildschirmrand
+    if(brightness > 0.08){
+      projected.forEach(function(pt){
+        if(pt.dispNorm < 0.4) return;
+        const dx = Math.cos(pt.angle), dy = Math.sin(pt.angle);
+        let edgeT = Infinity;
+        if(dx > 0.0001) edgeT = Math.min(edgeT, (W-cx)/dx);
+        else if(dx < -0.0001) edgeT = Math.min(edgeT, (0-cx)/dx);
+        if(dy > 0.0001) edgeT = Math.min(edgeT, (H-cy)/dy);
+        else if(dy < -0.0001) edgeT = Math.min(edgeT, (0-cy)/dy);
+        if(!isFinite(edgeT) || edgeT <= 0) return;
+        const reach = Math.min(1, (pt.dispNorm - 0.4) / 0.6) * peak;
+        const ex = cx + dx * edgeT * reach;
+        const ey = cy + dy * edgeT * reach;
+        const grad = ctx.createLinearGradient(pt.p.x, pt.p.y, ex, ey);
+        const baseAlpha = (0.3 + brightness*0.5) * pt.dispNorm;
+        grad.addColorStop(0, `hsla(${r.hue},100%,75%,${baseAlpha})`);
+        grad.addColorStop(0.4, `hsla(${r.hue},100%,70%,${baseAlpha*0.35})`);
+        grad.addColorStop(1, `hsla(${r.hue},100%,70%,0)`);
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 0.6 + brightness*1.8;
+        ctx.beginPath();
+        ctx.moveTo(pt.p.x, pt.p.y);
+        ctx.lineTo(ex, ey);
+        ctx.stroke();
+      });
+    }
+  });
+  ctx.shadowBlur = 0;
+
+  // Bass-Blitz: radialer Aufhellungs-Puls aus der Mitte
+  if(flashAmount > 0.01){
+    const g = ctx.createRadialGradient(cx,cy,0,cx,cy,Math.max(W,H)*0.6);
+    g.addColorStop(0, `rgba(255,255,255,${flashAmount*0.55})`);
+    g.addColorStop(0.3, `rgba(120,220,255,${flashAmount*0.25})`);
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,W,H);
+  }
+}
+
+let lastT = performance.now();
+function frame(now){
+  requestAnimationFrame(frame);
+  const dt = Math.min(0.05, (now - lastT)/1000);
+  lastT = now;
+  analyzeEnergy();
+  updateCenter(dt);
+  updateZoom(dt);
+  updateRotation(dt);
+  updateRings(dt);
+  draw();
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
