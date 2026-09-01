@@ -12,6 +12,9 @@
     text-shadow:0 0 12px rgba(0,255,255,.8);z-index:5}
   h1 span{display:block;font-size:11px;font-weight:400;color:#8ad;margin-top:2px}
   .toggle-hud{position:fixed;top:14px;right:16px;z-index:5}
+  #fpsDisplay{position:fixed;top:56px;right:16px;z-index:5;font-size:11px;color:#0ff;
+    background:rgba(0,10,20,.7);border:1px solid rgba(0,255,255,.25);border-radius:6px;
+    padding:4px 8px;font-variant-numeric:tabular-nums;letter-spacing:.02em}
   button,input[type=file]::file-selector-button{
     padding:8px 12px;background:rgba(0,10,20,.7);border:1px solid rgba(0,255,255,.35);border-radius:8px;
     color:#dff;cursor:pointer;font-size:13px;backdrop-filter:blur(6px)}
@@ -34,6 +37,7 @@
 <canvas id="c"></canvas>
 <h1>🌀 Tunnel Visualizer <span>Sound-Peaks in Echtzeit · Mockup</span></h1>
 <button class="toggle-hud" id="hideHud">Bedienfeld ausblenden</button>
+<div id="fpsDisplay">FPS: --</div>
 
 <div class="hud" id="hud">
   <div class="source-row">
@@ -42,9 +46,9 @@
     <button id="playPauseBtn" disabled>Play</button>
   </div>
   <div class="sliders">
-    <div class="row"><label>Flug-Geschwindigkeit</label><input type="range" id="speed" min="10" max="100" value="10"><span class="val" id="speedVal">10</span></div>
+    <div class="row"><label>Flug-Geschwindigkeit</label><input type="range" id="speed" min="10" max="100" value="50"><span class="val" id="speedVal">50</span></div>
     <div class="row"><label>Peak-Stärke</label><input type="range" id="peakStrength" min="0" max="100" value="100"><span class="val" id="peakStrengthVal">100</span></div>
-    <div class="row"><label>Glow-Intensität</label><input type="range" id="glow" min="0" max="100" value="100"><span class="val" id="glowVal">100</span></div>
+    <div class="row"><label>Glow-Intensität</label><input type="range" id="glow" min="0" max="100" value="0"><span class="val" id="glowVal">0</span></div>
     <div class="row"><label>Ringe</label><input type="range" id="ringCount" min="16" max="60" value="16" step="2"><span class="val" id="ringCountVal">16</span></div>
     <div class="row"><label>Bass-Blitz</label><input type="range" id="flashStrength" min="0" max="100" value="100"><span class="val" id="flashStrengthVal">100</span></div>
   </div>
@@ -142,7 +146,7 @@ document.getElementById('hideHud').addEventListener('click', function(){
 });
 
 // ---------- Regler ----------
-const params = { speed:10, peakStrength:100, glow:100, ringCount:16, flashStrength:100 };
+const params = { speed:50, peakStrength:100, glow:0, ringCount:16, flashStrength:100 };
 ['speed','peakStrength','glow','ringCount','flashStrength'].forEach(function(id){
   const el = document.getElementById(id);
   const lbl = document.getElementById(id+'Val');
@@ -445,10 +449,19 @@ function draw(){
 }
 
 let lastT = performance.now();
+let fpsFrameCount = 0, fpsLastUpdate = performance.now();
+const fpsDisplayEl = document.getElementById('fpsDisplay');
 function frame(now){
   requestAnimationFrame(frame);
   const dt = Math.min(0.05, (now - lastT)/1000);
   lastT = now;
+  fpsFrameCount++;
+  if(now - fpsLastUpdate >= 500){
+    const fps = Math.round(fpsFrameCount / ((now - fpsLastUpdate)/1000));
+    fpsDisplayEl.textContent = 'FPS: ' + fps;
+    fpsFrameCount = 0;
+    fpsLastUpdate = now;
+  }
   analyzeEnergy();
   updateCenter(dt);
   updateZoom(dt);
