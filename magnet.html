@@ -3,43 +3,36 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Magnetosphere Visualizer</title>
+<title>Tunnel Visualizer</title>
 <style>
-  :root{
-    --space-0:#050714; --space-1:#0a0e24; --space-2:#12173a;
-    --core:#eaf6ff; --core-mid:#5fb3ff; --field:#38bdf8; --field-hot:#c4f1ff;
-    --tail:#7c5cff; --aurora:#5eead4; --aurora-2:#86efac;
-    --panel:rgba(10,14,36,.72); --border:rgba(120,150,220,.25); --text:#dce6ff; --text2:#8a97c4;
-  }
   *{box-sizing:border-box}
-  html,body{margin:0;height:100%;background:var(--space-0);overflow:hidden;font-family:-apple-system,Segoe UI,Roboto,sans-serif}
-  #stage{position:fixed;inset:0}
+  html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:-apple-system,Segoe UI,Roboto,sans-serif}
   canvas{display:block;width:100%;height:100%}
-  .hud{position:fixed;left:0;right:0;bottom:0;padding:14px 16px calc(14px + env(safe-area-inset-bottom));
-    background:linear-gradient(to top, rgba(5,7,20,.92), rgba(5,7,20,0));
-    display:flex;flex-direction:column;gap:10px;color:var(--text)}
-  h1{position:fixed;top:14px;left:16px;margin:0;font-size:15px;font-weight:600;letter-spacing:.02em;color:var(--text);
-    text-shadow:0 0 12px rgba(93,179,255,.6)}
-  h1 span{display:block;font-size:11px;font-weight:400;color:var(--text2);margin-top:2px;letter-spacing:.03em}
-  .source-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  h1{position:fixed;top:14px;left:16px;margin:0;font-size:14px;font-weight:600;letter-spacing:.02em;color:#fff;
+    text-shadow:0 0 12px rgba(0,255,255,.8);z-index:5}
+  h1 span{display:block;font-size:11px;font-weight:400;color:#8ad;margin-top:2px}
+  .toggle-hud{position:fixed;top:14px;right:16px;z-index:5}
   button,input[type=file]::file-selector-button{
-    padding:8px 12px;background:var(--panel);border:1px solid var(--border);border-radius:8px;
-    color:var(--text);cursor:pointer;font-size:13px;backdrop-filter:blur(6px)}
-  button:hover{background:rgba(56,189,248,.15);border-color:var(--field)}
+    padding:8px 12px;background:rgba(0,10,20,.7);border:1px solid rgba(0,255,255,.35);border-radius:8px;
+    color:#dff;cursor:pointer;font-size:13px;backdrop-filter:blur(6px)}
+  button:hover{background:rgba(0,255,255,.15)}
   button:disabled{opacity:.35;cursor:not-allowed}
-  input[type=file]{color:var(--text2);font-size:12px;flex:1;min-width:140px}
-  .sliders{display:grid;grid-template-columns:1fr;gap:6px;background:var(--panel);border:1px solid var(--border);
+  .hud{position:fixed;left:0;right:0;bottom:0;padding:14px 16px calc(14px + env(safe-area-inset-bottom));
+    background:linear-gradient(to top, rgba(0,0,0,.92), rgba(0,0,0,0));
+    display:flex;flex-direction:column;gap:10px;z-index:5}
+  .source-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  input[type=file]{color:#8ad;font-size:12px;flex:1;min-width:140px}
+  .sliders{display:grid;gap:6px;background:rgba(0,10,20,.7);border:1px solid rgba(0,255,255,.25);
     border-radius:10px;padding:10px 12px;backdrop-filter:blur(6px)}
   .row{display:flex;align-items:center;gap:8px}
-  .row label{width:120px;font-size:11px;color:var(--text2);flex-shrink:0}
-  .row input[type=range]{flex:1;accent-color:var(--field)}
-  .row .val{width:40px;text-align:right;font-size:11px;color:var(--field);font-variant-numeric:tabular-nums}
-  .toggle-hud{position:fixed;top:14px;right:16px;z-index:5}
+  .row label{width:120px;font-size:11px;color:#8ad;flex-shrink:0}
+  .row input[type=range]{flex:1;accent-color:#0ff}
+  .row .val{width:40px;text-align:right;font-size:11px;color:#0ff;font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
-<div id="stage"><canvas id="c"></canvas></div>
-<h1>🧲 Magnetosphere <span>audio-reaktive Feldlinien · Mockup</span></h1>
+<canvas id="c"></canvas>
+<h1>🌀 Tunnel Visualizer <span>Sound-Peaks in Echtzeit · Mockup</span></h1>
 <button class="toggle-hud" id="hideHud">Bedienfeld ausblenden</button>
 
 <div class="hud" id="hud">
@@ -49,10 +42,11 @@
     <button id="playPauseBtn" disabled>Play</button>
   </div>
   <div class="sliders">
-    <div class="row"><label>Bass-Kompression</label><input type="range" id="bassSens" min="0" max="100" value="60"><span class="val" id="bassSensVal">60</span></div>
-    <div class="row"><label>Schweif-Länge</label><input type="range" id="tailLen" min="20" max="100" value="55"><span class="val" id="tailLenVal">55</span></div>
-    <div class="row"><label>Aurora-Dichte</label><input type="range" id="auroraDensity" min="0" max="100" value="50"><span class="val" id="auroraDensityVal">50</span></div>
-    <div class="row"><label>Feldlinien</label><input type="range" id="lineCount" min="3" max="10" value="6" step="1"><span class="val" id="lineCountVal">6</span></div>
+    <div class="row"><label>Flug-Geschwindigkeit</label><input type="range" id="speed" min="10" max="100" value="45"><span class="val" id="speedVal">45</span></div>
+    <div class="row"><label>Peak-Stärke</label><input type="range" id="peakStrength" min="0" max="100" value="65"><span class="val" id="peakStrengthVal">65</span></div>
+    <div class="row"><label>Glow-Intensität</label><input type="range" id="glow" min="0" max="100" value="70"><span class="val" id="glowVal">70</span></div>
+    <div class="row"><label>Ringe</label><input type="range" id="ringCount" min="16" max="60" value="36" step="2"><span class="val" id="ringCountVal">36</span></div>
+    <div class="row"><label>Bass-Blitz</label><input type="range" id="flashStrength" min="0" max="100" value="55"><span class="val" id="flashStrengthVal">55</span></div>
   </div>
 </div>
 
@@ -60,45 +54,35 @@
 // ---------- Canvas Setup ----------
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
-let W = 0, H = 0, DPR = Math.min(2, window.devicePixelRatio || 1);
+let W=0,H=0,DPR=Math.min(2,window.devicePixelRatio||1);
 function resize(){
-  W = window.innerWidth; H = window.innerHeight;
-  canvas.width = W * DPR; canvas.height = H * DPR;
-  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  W=window.innerWidth; H=window.innerHeight;
+  canvas.width=W*DPR; canvas.height=H*DPR;
+  canvas.style.width=W+'px'; canvas.style.height=H+'px';
   ctx.setTransform(DPR,0,0,DPR,0,0);
 }
 window.addEventListener('resize', resize);
 resize();
 
-// Statisches Sternenfeld (einmalig erzeugt)
-const stars = [];
-for(let i=0;i<160;i++){
-  stars.push({ x: Math.random(), y: Math.random(), r: Math.random()*1.3+.2, a: Math.random()*.6+.2 });
-}
-
 // ---------- Audio Setup ----------
 let audioCtx=null, sourceNode=null, sourceAudioEl=null, testOsc=null, analyser=null;
-let dataFreq=null, dataTime=null;
+let dataFreq=null;
 let usingTestTone=false, isPlaying=false;
 
 function ensureCtx(){ if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); return audioCtx; }
-
 function initAnalyser(){
   if(analyser) return;
   analyser = audioCtx.createAnalyser();
-  analyser.fftSize = 512;
-  analyser.smoothingTimeConstant = 0.75;
+  analyser.fftSize = 1024;
+  analyser.smoothingTimeConstant = 0.55;
   dataFreq = new Uint8Array(analyser.frequencyBinCount);
-  dataTime = new Uint8Array(analyser.fftSize);
   analyser.connect(audioCtx.destination);
 }
-
 function setSource(node){
   if(sourceNode){ try{ sourceNode.disconnect(); }catch(e){} }
   sourceNode = node;
   sourceNode.connect(analyser);
 }
-
 document.getElementById('fileInput').addEventListener('change', function(e){
   const file = e.target.files[0];
   if(!file) return;
@@ -115,7 +99,6 @@ document.getElementById('fileInput').addEventListener('change', function(e){
   document.getElementById('playPauseBtn').disabled = false;
   document.getElementById('playPauseBtn').textContent = 'Pause';
 });
-
 document.getElementById('testToneBtn').addEventListener('click', function(){
   ensureCtx(); initAnalyser();
   if(sourceAudioEl) sourceAudioEl.pause();
@@ -123,20 +106,25 @@ document.getElementById('testToneBtn').addEventListener('click', function(){
   usingTestTone = true;
   testOsc = audioCtx.createOscillator();
   testOsc.type = 'sawtooth';
-  testOsc.frequency.value = 90;
-  const lfo = audioCtx.createOscillator(); lfo.frequency.value = 0.15;
-  const lfoGain = audioCtx.createGain(); lfoGain.gain.value = 40;
-  lfo.connect(lfoGain); lfoGain.connect(testOsc.frequency);
-  lfo.start();
-  const toneGain = audioCtx.createGain(); toneGain.gain.value = 0.35;
+  testOsc.frequency.value = 80;
+  const toneGain = audioCtx.createGain(); toneGain.gain.value = 0.001;
   testOsc.connect(toneGain);
   testOsc.start();
+  // simulierter "Beat": periodische Lautstaerke-Stoesse, damit man Peaks sofort sieht
+  const ctxA = audioCtx;
+  function pulse(){
+    const t = ctxA.currentTime;
+    toneGain.gain.cancelScheduledValues(t);
+    toneGain.gain.setValueAtTime(0.5, t);
+    toneGain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+  }
+  pulse();
+  testOsc._pulseInterval = setInterval(pulse, 500);
   setSource(toneGain);
   isPlaying = true;
   document.getElementById('playPauseBtn').disabled = false;
   document.getElementById('playPauseBtn').textContent = 'Pause';
 });
-
 document.getElementById('playPauseBtn').addEventListener('click', function(){
   if(usingTestTone){
     if(isPlaying){ audioCtx.suspend(); isPlaying=false; this.textContent='Play'; }
@@ -146,7 +134,6 @@ document.getElementById('playPauseBtn').addEventListener('click', function(){
     else { sourceAudioEl.play(); isPlaying=true; this.textContent='Pause'; }
   }
 });
-
 document.getElementById('hideHud').addEventListener('click', function(){
   const hud = document.getElementById('hud');
   const hidden = hud.style.display === 'none';
@@ -154,163 +141,138 @@ document.getElementById('hideHud').addEventListener('click', function(){
   this.textContent = hidden ? 'Bedienfeld ausblenden' : 'Bedienfeld einblenden';
 });
 
-// ---------- Slider-Werte ----------
-const params = { bassSens:60, tailLen:55, auroraDensity:50, lineCount:6 };
-['bassSens','tailLen','auroraDensity','lineCount'].forEach(function(id){
+// ---------- Regler ----------
+const params = { speed:45, peakStrength:65, glow:70, ringCount:36, flashStrength:55 };
+['speed','peakStrength','glow','ringCount','flashStrength'].forEach(function(id){
   const el = document.getElementById(id);
   const lbl = document.getElementById(id+'Val');
-  el.addEventListener('input', function(){ params[id] = parseFloat(el.value); lbl.textContent = el.value; });
+  el.addEventListener('input', function(){
+    params[id] = parseFloat(el.value); lbl.textContent = el.value;
+    if(id === 'ringCount') buildRings();
+  });
 });
 
 // ---------- Audio-Analyse ----------
-let bassEnv = 0, midEnv = 0, trebleEnv = 0, overallEnv = 0;
-function analyze(){
-  if(!analyser){ return; }
+const POINTS = 48;      // Punkte pro Ring
+const MAXZ = 2000;       // Tunneltiefe
+let bassEnv=0, bassPrev=0, overallEnv=0;
+function getSpectrumSnapshot(){
+  const snap = new Float32Array(POINTS);
+  if(!analyser){ return snap; }
+  analyser.getByteFrequencyData(dataFreq);
+  const usable = Math.floor(dataFreq.length * 0.75); // hohe, meist leere Bins auslassen
+  for(let i=0;i<POINTS;i++){
+    const bin = Math.floor((i/POINTS) * usable);
+    snap[i] = dataFreq[bin] / 255;
+  }
+  return snap;
+}
+function analyzeEnergy(){
+  if(!analyser) return;
   analyser.getByteFrequencyData(dataFreq);
   const n = dataFreq.length;
-  const bassEnd = Math.floor(n*0.12), midEnd = Math.floor(n*0.5);
-  let bass=0, mid=0, treble=0;
+  const bassEnd = Math.floor(n*0.08);
+  let bass=0, overall=0;
   for(let i=0;i<bassEnd;i++) bass += dataFreq[i];
-  for(let i=bassEnd;i<midEnd;i++) mid += dataFreq[i];
-  for(let i=midEnd;i<n;i++) treble += dataFreq[i];
-  bass /= (bassEnd*255); mid /= ((midEnd-bassEnd)*255); treble /= ((n-midEnd)*255);
-  let overall=0; for(let i=0;i<n;i++) overall += dataFreq[i]; overall /= (n*255);
-  // sanftes Nachziehen (Envelope-Follower), damit es organisch statt zappelig wirkt
-  bassEnv += (bass - bassEnv) * 0.18;
-  midEnv += (mid - midEnv) * 0.15;
-  trebleEnv += (treble - trebleEnv) * 0.25;
-  overallEnv += (overall - overallEnv) * 0.12;
+  for(let i=0;i<n;i++) overall += dataFreq[i];
+  bass /= (bassEnd*255); overall /= (n*255);
+  bassPrev = bassEnv;
+  bassEnv += (bass - bassEnv) * 0.35;
+  overallEnv += (overall - overallEnv) * 0.1;
 }
 
-// ---------- Partikel (Aurora entlang des Schweifs) ----------
-let particles = [];
-function spawnParticles(cx, cy, tailX){
-  const density = params.auroraDensity/100;
-  const rate = Math.floor(density * trebleEnv * 4);
-  for(let i=0;i<rate;i++){
-    const side = Math.random() < 0.5 ? 1 : -1;
-    particles.push({
-      x: cx + 20 + Math.random()*30,
-      y: cy + side * (10 + Math.random()*20),
-      vx: 1.2 + Math.random()*1.8 + overallEnv*2,
-      vy: side * (0.1 + Math.random()*0.3),
-      life: 1,
-      size: 1 + Math.random()*2
-    });
+// ---------- Tunnel-Ringe ----------
+let rings = [];
+function buildRings(){
+  rings = [];
+  const count = Math.round(params.ringCount);
+  for(let i=0;i<count;i++){
+    rings.push({ z: (i/count) * MAXZ, shape: getSpectrumSnapshot(), hue: 180 });
   }
 }
-function updateParticles(tailX){
-  particles.forEach(function(p){
-    p.x += p.vx; p.y += p.vy;
-    p.life -= 0.012;
+buildRings();
+
+let flashAmount = 0;
+let hueTime = 0;
+
+function updateRings(dt){
+  const speed = params.speed * 4;
+  hueTime += dt * 12;
+  const spacing = MAXZ / rings.length;
+  rings.forEach(function(r){
+    r.z -= speed * dt * 60;
+    if(r.z <= 1){
+      r.z += MAXZ;
+      r.shape = getSpectrumSnapshot();
+      r.hue = (hueTime + Math.random()*40) % 360;
+    }
   });
-  particles = particles.filter(function(p){ return p.life > 0 && p.x < tailX + 60; });
-}
-
-// ---------- Zeichnen ----------
-function drawBackground(){
-  ctx.fillStyle = '#050714';
-  ctx.fillRect(0,0,W,H);
-  const g = ctx.createRadialGradient(W*0.35,H*0.5,0,W*0.35,H*0.5,Math.max(W,H)*0.8);
-  g.addColorStop(0,'rgba(20,30,70,.55)');
-  g.addColorStop(1,'rgba(5,7,20,0)');
-  ctx.fillStyle = g;
-  ctx.fillRect(0,0,W,H);
-  ctx.save();
-  stars.forEach(function(s){
-    const tw = 0.6 + 0.4*Math.sin(performance.now()/900 + s.x*40);
-    ctx.globalAlpha = s.a * tw;
-    ctx.fillStyle = '#dce6ff';
-    ctx.beginPath();
-    ctx.arc(s.x*W, s.y*H, s.r, 0, Math.PI*2);
-    ctx.fill();
-  });
-  ctx.restore();
-}
-
-function drawPlanet(cx, cy, radius){
-  const glowR = radius * (2.2 + overallEnv*1.5);
-  const g = ctx.createRadialGradient(cx,cy,0,cx,cy,glowR);
-  g.addColorStop(0,'rgba(234,246,255,.9)');
-  g.addColorStop(0.25,'rgba(95,179,255,.35)');
-  g.addColorStop(1,'rgba(95,179,255,0)');
-  ctx.fillStyle = g;
-  ctx.beginPath(); ctx.arc(cx,cy,glowR,0,Math.PI*2); ctx.fill();
-
-  const core = ctx.createRadialGradient(cx-radius*0.3,cy-radius*0.3,radius*0.1,cx,cy,radius);
-  core.addColorStop(0,'#eaf6ff');
-  core.addColorStop(0.5,'#5fb3ff');
-  core.addColorStop(1,'#1c3a7a');
-  ctx.fillStyle = core;
-  ctx.beginPath(); ctx.arc(cx,cy,radius,0,Math.PI*2); ctx.fill();
-}
-
-function drawFieldLines(cx, cy){
-  const sens = params.bassSens/100;
-  const standoff = 55 + (1-sens*0.7*bassEnv) * 40; // Bass drueckt die Tagseite naeher ans Zentrum
-  const tailBase = 90 + (params.tailLen/100) * (W*0.55);
-  const tailX = cx + tailBase + midEnv*60;
-  const count = Math.round(params.lineCount);
-
-  for(let i=count;i>=1;i--){
-    const t = i / count;
-    const dayX = cx - standoff * (0.5 + t*0.7);
-    const spreadY = (30 + t*90) * (1 + overallEnv*0.4);
-    const tailXi = cx + (tailX - cx) * (0.55 + t*0.5);
-    const tailSpread = spreadY * (1.6 + t*1.2);
-
-    const hue = 195 + t*40; // blau -> lila Richtung Schweif
-    const alpha = 0.15 + (1-t)*0.35 + midEnv*0.25;
-    ctx.strokeStyle = `hsla(${hue},90%,${65 - t*15}%,${alpha})`;
-    ctx.lineWidth = 1.2 + (1-t)*1.8;
-    ctx.shadowColor = `hsla(${hue},90%,70%,${0.5})`;
-    ctx.shadowBlur = 6 + midEnv*10;
-
-    // obere Haelfte
-    ctx.beginPath();
-    ctx.moveTo(dayX, cy);
-    ctx.bezierCurveTo(
-      cx - standoff*0.2, cy - spreadY*0.9,
-      cx + (tailXi-cx)*0.4, cy - tailSpread*0.7,
-      tailXi, cy - tailSpread*0.15
-    );
-    ctx.stroke();
-    // untere Haelfte (gespiegelt)
-    ctx.beginPath();
-    ctx.moveTo(dayX, cy);
-    ctx.bezierCurveTo(
-      cx - standoff*0.2, cy + spreadY*0.9,
-      cx + (tailXi-cx)*0.4, cy + tailSpread*0.7,
-      tailXi, cy + tailSpread*0.15
-    );
-    ctx.stroke();
+  // Bass-Onset erkennen -> Blitz ausloesen
+  if(bassEnv - bassPrev > 0.04 && bassEnv > 0.35){
+    flashAmount = Math.min(1, flashAmount + (params.flashStrength/100));
   }
+  flashAmount *= 0.85;
+}
+
+function project(x, y, z, cx, cy){
+  const focal = 300;
+  const scale = focal / (focal + z);
+  return { x: cx + x*scale, y: cy + y*scale, scale: scale };
+}
+
+function draw(){
+  // Trail statt Vollclear -> Bewegungsunschaerfe / Glow-Nachzieheffekt
+  ctx.fillStyle = 'rgba(0,0,0,0.28)';
+  ctx.fillRect(0,0,W,H);
+
+  const cx = W/2, cy = H/2;
+  const baseRadius = Math.min(W,H) * 0.32;
+  const peak = params.peakStrength/100;
+  const glowAmt = params.glow/100;
+
+  const sorted = rings.slice().sort(function(a,b){ return b.z - a.z; }); // fern -> nah
+
+  sorted.forEach(function(r){
+    const brightness = Math.max(0, 1 - r.z/MAXZ);
+    ctx.beginPath();
+    for(let i=0;i<=POINTS;i++){
+      const idx = i % POINTS;
+      const angle = (idx/POINTS) * Math.PI*2;
+      const disp = r.shape[idx] * peak * baseRadius * 0.9;
+      const radius = baseRadius + disp;
+      const px = Math.cos(angle) * radius;
+      const py = Math.sin(angle) * radius;
+      const p = project(px, py, r.z, cx, cy);
+      if(i===0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+    }
+    const alpha = 0.15 + brightness*0.85;
+    ctx.strokeStyle = `hsla(${r.hue},100%,${55+brightness*25}%,${alpha})`;
+    ctx.lineWidth = 1 + brightness*2.5;
+    ctx.shadowBlur = glowAmt * (8 + brightness*22);
+    ctx.shadowColor = `hsla(${r.hue},100%,60%,1)`;
+    ctx.stroke();
+  });
   ctx.shadowBlur = 0;
-  return tailX;
-}
 
-function drawParticles(){
-  particles.forEach(function(p){
-    ctx.globalAlpha = Math.max(0, p.life);
-    const g = Math.random() < 0.5 ? '#5eead4' : '#86efac';
+  // Bass-Blitz: radialer Aufhellungs-Puls aus der Mitte
+  if(flashAmount > 0.01){
+    const g = ctx.createRadialGradient(cx,cy,0,cx,cy,Math.max(W,H)*0.6);
+    g.addColorStop(0, `rgba(255,255,255,${flashAmount*0.55})`);
+    g.addColorStop(0.3, `rgba(120,220,255,${flashAmount*0.25})`);
+    g.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
-    ctx.fill();
-  });
-  ctx.globalAlpha = 1;
+    ctx.fillRect(0,0,W,H);
+  }
 }
 
-function frame(){
+let lastT = performance.now();
+function frame(now){
   requestAnimationFrame(frame);
-  analyze();
-  drawBackground();
-  const cx = W*0.35, cy = H*0.5;
-  const tailX = drawFieldLines(cx, cy);
-  spawnParticles(cx, cy, tailX);
-  updateParticles(tailX);
-  drawParticles();
-  drawPlanet(cx, cy, 26 + bassEnv*10);
+  const dt = Math.min(0.05, (now - lastT)/1000);
+  lastT = now;
+  analyzeEnergy();
+  updateRings(dt);
+  draw();
 }
 requestAnimationFrame(frame);
 </script>
